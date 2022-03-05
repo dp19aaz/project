@@ -1,0 +1,19 @@
+run file
+tk window
+asks for ip
+connects to ip
+get latest images
+check MSE
+
+buttons:
+	toggle live display images
+	close connection and completely stop
+	
+
+
+tk window for setting up (entering ip)
+then a new one for the rest (once connected)
+`setup()
+ while 1:
+ 	Main().mainloop()`
+this way when close main tk window, it stays alive and keeps recving images

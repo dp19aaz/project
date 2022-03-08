@@ -30,19 +30,20 @@ class AESCipher(object):
 	def _unpad(s):
 		return s[:-ord(s[len(s)-1:])]
 
-def main():
-	key = 'k123'
-	cipher = AESCipher(key)
 
-	data = b'goleftatthebluetree'
-	enc = cipher.encrypt(data)
-	dec = cipher.decrypt(enc)
+# def main():
+# 	key = 'k123'
+# 	cipher = AESCipher(key)
 
-	for i in (data,enc,dec):
-		print(i.decode())
+# 	data = b'goleftatthebluetree'
+# 	enc = cipher.encrypt(data)
+# 	dec = cipher.decrypt(enc)
+
+# 	for i in (data,enc,dec):
+# 		print(i.decode())
 
 
 
-if __name__ == '__main__':
-	main()
-	print('\n\n')
+# if __name__ == '__main__':
+# 	main()
+# 	print('\n\n')

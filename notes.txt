@@ -17,3 +17,13 @@ then a new one for the rest (once connected)
  while 1:
  	Main().mainloop()`
 this way when close main tk window, it stays alive and keeps recving images
+
+
+
+
+
+
+"Copy latest to prev" 
+	move the open() f variable to self.
+	so that doesnt need to reopen everytime
+	maybe doesnt work? idk

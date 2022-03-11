@@ -1,5 +1,5 @@
+from calculations import *
 from tkinter import *
-
 from aescipher import AESCipher
 from datetime import datetime
 from time import sleep, time
@@ -7,73 +7,126 @@ from PIL import ImageTk,Image
 
 import threading
 import socket
-import numpy as np
-import cv2
+import config_window
 
 
-key = 'thisisAreallygoodpassword'
+### Write bytes to a filename
+def write_file(filename, bytes):
+	with open(filename, 'wb') as f:
+		f.write(bytes)
+
+
+
+### Returns latest.jpg as Pillow image object
+def open_latest():
+	try:    latest = Image.open('latest.jpg')
+	except: latest = Image.open('noimage.jpg')
+
+	return latest
+
+
+
+#Global variables
+global RUNNING
+
+with open('cipherkey.txt', 'r') as f:key = f.read()
 CIPHER = AESCipher(key)
 
 TIMEOUT = 2
 MAX_LENGTH = 2048
-
 MSE_LIMIT = 120
-
-
-
-### Calculate mean square error of two images
-def calc_mse(imageA, imageB):
-	mse = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
-	mse /= float(imageA.shape[0] * imageA.shape[1])
-	return mse
+RUNNING = True
 
 
 
 
+### Main window
 class Main(Tk):
 	def __init__(self, socket):
 		super().__init__()
 
+		#args
 		self.socket = socket
 
+		#window
+		self.geometry('964x700+300+300')#width,height,x,y
+		self.title(IP)#window title
+		self.bind('<F5>', self.update)#bind F5 key to call self.manage
 
-		self.geometry('964x700+300+300')#w,h,x,y
-		self.title(IP)
-		# self.protocol('WM_DELETE_WINDOW',self.stop)#close window (X)
-		self.bind('<F5>', self.manage)
+
+		#flags
+		self.config_window = None
+		self.write_next_image = False
+
 
 		#image
 		self.image_canvas = Canvas(self)
 
-		try:
-			latest = Image.open("latest.jpg")
-		except:
-			latest = Image.open('noimage.jpg')
+		latest = open_latest()
 
 		self.tkimagelatest = ImageTk.PhotoImage(master=self.image_canvas, image=latest)
 		self.latestlabel = Label(self.image_canvas, image=self.tkimagelatest, bg='black')
 
-		self.image_capturedate_label = Label(self, text='Image captured: n/a')
+		self.capturedate_label = Label(self, text='Image captured: n/a')
 		self.mse_label = Label(self, text='MSE: n/a')
 
-		update_btn = Button(self, text='refresh', command=self.manage)
+
+		#buttons
+		update_btn = Button(self, text='Update', command=self.update)
+		config_btn = Button(self, text='Config', command=self.open_config)
+		save_pic_btn = Button(self, text='Save pic', command=self.save_pic)
+		completely_quit_btn = Button(self, text='Completely quit', command=self.completely_quit)
+
 
 		#geometry management
 		self.image_canvas.grid()
 		self.latestlabel.grid()
 
-		self.image_capturedate_label.grid()
+		self.capturedate_label.grid()
 		self.mse_label.grid()
 
 		update_btn.grid()
+		config_btn.grid()
+		completely_quit_btn.grid()
+
+
+	### Save latest captured frame
+	def save_pic(self):
+		self.write_next_image = True
 
 
 
-	def manage(self, event=None):
+	### Update cam settings
+	def update_cam_settings(self, settings):
+		...
+
+
+
+	### Close config camera settings window
+	def close_config(self):
+		if self.config_window:
+			self.config_window.destroy()
+			self.config_window = None
+
+
+
+	### Open configure camera settings window
+	def open_config(self):
+		if self.config_window:
+			#check if config window already open
+			return
+
+		self.config_window = config_window.window(self, 'Configure %s'%IP)
+		self.config_window.mainloop()
+
+
+
+	### Main thread
+	def update(self, event=None):
 		#Get latest captured image
 			#latest_filename = date and time of image capture
 			#latest_bytes = byte stream of image
-		info = self.get_latest()
+		info = self.get_latest_capture()
 
 		if info:
 			latest_filename, latest_bytes = info
@@ -86,56 +139,49 @@ class Main(Tk):
 
 		#Calculate MSE
 		mse = self.calc_mse('latest.jpg', 'prev.jpg')
-		self.mse_label.config(text='MSE: {:,.2f}'.format(mse))
+
+
+		#Calculate SSIM
+		ssim = self.calc_ssim('latest.jpg', 'prev.jpg')
+
 
 		if mse >= MSE_LIMIT:
 			print('\nMSE above limit.\nTime: %s\nFilename: %s\n'%(time(), latest_filename))
-			self.write_file(latest_filename, latest_bytes)
+		if ssim >= SSIM_LIMIT:
+			print('\nSSIM above limit.')
+
+		if (mse >= MSE_LIMIT) or (ssim >= SSIM_LIMIT) or self.write_next_image:
+			write_file(latest_filename, latest_bytes)
+			self.write_next_image = False
+
 
 		#Update displayed image
-		self.update_image(latest_filename)
+		self.update_image(latest_filename, mse, ssim)
 
 
 
-
-	def write_file(self, filename, bytes):
-		with open(filename, 'wb') as f:
-			f.write(bytes)
-
-
-
-	def update_image(self, capturedate):
+	### Update image and related labels
+	def update_image(self, capturedate, mse, ssim):
 		print('updating image')
-		try:
-			latest = Image.open('latest.jpg')
-		except:
-			latest = Image.open('noimage.jpg')
+		latest = open_latest()
 		self.tkimagelatest = ImageTk.PhotoImage(master=self.image_canvas, image=latest)
 		self.latestlabel.config(image=self.tkimagelatest) 
 
-		self.image_capturedate_label['text'] = 'Image captured: %s'%capturedate
+		self.capturedate_label['text'] = 'Image captured: %s'%capturedate
+		self.mse_label.config(text='MSE: {:,.2f}'.format(mse))
 
 
-	def calc_mse(self, filenameA, filenameB):
-		imageA = cv2.imread(filenameA)
-		imageB = cv2.imread(filenameB)
 
-		try:
-			return calc_mse(imageA, imageB)
-		except:
-			return -1
-
-
+	### Send data via self.socket
 	def socket_send(self, data, encode=True, encrypt=True):
-		if encode:
-			data = data.encode()
-		if encrypt:
-			data = CIPHER.encrypt(data)
+		if encode:  data = data.encode()
+		if encrypt: data = CIPHER.encrypt(data)
 
 		self.socket.sendall(data)
 
 
 
+	### Receive data via self.socket
 	def socket_receive(self, length=MAX_LENGTH, timeout=TIMEOUT, decode=False, decrypt=True):
 		s = self.socket
 		s.settimeout(timeout)
@@ -150,23 +196,19 @@ class Main(Tk):
 		except socket.timeout:
 			return -1
 
-
-
 		return buf
 
 
 
-
-	### Request latest captured image
-	def get_latest(self):
+	### Request and receive latest captured image
+	def get_latest_capture(self):
 
 		#Request file
 		self.socket_send('SEND_LATEST#')
 
 		#Receive file header data
 		buf = self.socket_receive(length=120, decode=True)
-		# buf = buf.decode()
-		print(buf)
+		# print(buf)
 		if buf == -1:return None
 		filename, filesize = buf.split('#')
 		filesize = int(filesize)
@@ -202,6 +244,12 @@ class Main(Tk):
 
 
 
+	### Quit program, not just close window
+	def completely_quit(self, event=None):
+		RUNNING = False
+		self.destroy()
+
+
 
 
 
@@ -210,12 +258,17 @@ PORT = 9090
 IP = '192.168.0.21'
 
 
-while 1:
+while RUNNING:
+	sleep(1)
 
+
+	#create socket
 	print('Connecting...',end='')
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.settimeout(TIMEOUT)
 
+
+	#attempt connecting to camera
 	try:
 		s.connect( (IP, PORT) )
 		print('Connected.')
@@ -224,9 +277,14 @@ while 1:
 		continue
 
 
+	#open tk window to run main program
 	try:
 		main = Main(s)
 		main.mainloop()
 	except Exception as err:
 		print(err)
-		pass
+
+
+	#close socket
+	try:    s.close()
+	except: pass

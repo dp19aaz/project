@@ -2,6 +2,7 @@ from aescipher import AESCipher
 from datetime import datetime
 from time import sleep, time
 
+# import pickle
 import picamera
 import threading
 import socket
@@ -84,19 +85,57 @@ def take_pic(store_pic=True):
 	return unix
 
 
-### Set camera settings
-def set_settings(values):
-	...
+
+### Set camera settings to parameter
+def set_settings(file):
+	# settings = dict(get_cam_settings())
+	# difference = set(values.items()) - set(settings.items())
+
+	# file = "\n".join([':'.join(map(str,i)) for i in values.items()])
+	with open('cam_settings.txt', 'w'):
+		f.write(file)
+
+	update_settings()
+
+
+### Update settings according to cam_settings.txt
+def update_settings():
+	global camera
+
+	with open('cam_settings.txt', 'r') as f:
+		data = f.read()
+
+	c,b,s,i,e,r,drc,q,di = data.split(',')
+	w,h = di.split('x')#width,height
+	
+	camera.contract=int(c)
+	camera.brightness=int(b)
+	camera.saturation=int(s)
+	camera.ISO=int(i)
+	camera.exposure=e
+	camera.rotation=int(r)
+	camera.drc=drc
+	camera.quality=int(q)
+	camera.width=int(w)
+	camera.height=int(h)
+
+
 
 
 ### Send camera settings
-def send_cam_settings():
+def send_cam_settings(conn):
 	settings = get_cam_settings()
+	socket_send(conn, settings)
+
+
 
 
 ### Return camera settings
 def get_cam_settings():
-	...
+	with open('cam_settings.txt', 'r') as f:
+		data = f.read()	
+
+	return data
 
 
 
@@ -143,14 +182,6 @@ def handle():
 			latest_image_date = unix_to_date(latest_image_unix)
 
 
-		# if not conn:
-		# 	try:
-		# 		conn, addr = s.accept()
-		# 		conn.settimeout(TIMEOUT)
-		# 		print(addr, 'connected')
-		# 	except socket.timeout:
-		# 		print('Socket timed out.')
-		# 		continue
 		if not conn:break
 
 
@@ -188,13 +219,11 @@ def handle():
 
 
 		if signal == 'SET_SETTINGS':
-			values = conn.recv(MAX_LENGTH)
-			values = CIHPER.decrypt(values)
-			set_settings(values)
+			set_settings(value)
 
 
-		if signal == 'SEND_CAM_SETTINGS'
-			send_cam_settings()
+		if signal == 'SEND_CAM_SETTINGS':
+			send_cam_settings(conn)
 
 
 	#print('!Handling stopped.\n')
@@ -207,6 +236,7 @@ IP = '192.168.0.21'
 
 
 while 1:
+	global camera
 	#print('*Thread running.')
 
 	#setup camera

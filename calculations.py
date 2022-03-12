@@ -13,7 +13,7 @@ def read_images(filenameA, filenameB):
 
 
 ### Calculate mean squared error given two image filenames
-def calc_mse(self, filenameA, filenameB):
+def calc_mse(filenameA, filenameB):
 	imageA, imageB = read_images(filenameA, filenameB)
 
 	try:
@@ -24,8 +24,8 @@ def calc_mse(self, filenameA, filenameB):
 		return -1
 
 
-### Calculate structural similarity given two image filenames
-def calc_ssim(self, filenameA, filenameB, channel_axis=2):
+### Calculate structural similarity index measure given two image filenames
+def calc_ssim(filenameA, filenameB, channel_axis=2):
 	imageA, imageB = read_images(filenameA, filenameB)
 
 	try:

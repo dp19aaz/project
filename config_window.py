@@ -19,29 +19,32 @@ class window(Toplevel):
 		self.settings_values_dictionary = self.get_option_values()
 
 
-		for setting in self.settings_values_dictionary.keys():
-			values = self.settings_values_dictionary[setting]
 
-			option_var = self.create_lbl_btn(setting, values)
+		for setting in self.settings_values_dictionary.keys():
+			values, curr_value = self.settings_values_dictionary[setting]
+
+			option_var = self.create_lbl_btn(setting, values, curr_value)
 			self.entry_variables[setting] = option_var
 
 
-		update_settings_btn = Button(self, text='Update settings', command=self.update_settings)
+		update_settings_btn = Button(self, text='Update settings', command=self.update_cam_settings)
 		update_settings_btn.grid()
 
 
 	def update_cam_settings(self):
 		...
 		#send full settings
-		new_settings = ...
+		settings = [i.get() for i in self.entry_variables.values()]
+		settings = ",".join(settings)
 
-		self.controller.update_cam_settings()
+		# print(settings)
+
+		self.controller.update_cam_settings(settings)
 
 
 
 	def get_cam_settings(self):
-		...
-		# get settings from camera
+		return self.controller.get_cam_settings()
 
 
 
@@ -51,29 +54,31 @@ class window(Toplevel):
 
 
 	def get_option_values(self):
-		with open('cam_setting_values.txt', 'r') as f:
-			data = f.read()
+		curr_values = self.current_settings.split(',')
+
+		with open('settings_values.txt', 'r') as f:
+			data = f.read()	
 
 		data = data.split('\n')
 
 		dic = {}
-		for line in data:
-			setting, values = line.split('#')
+		for index, line in enumerate(data):
+			setting, values = line.split(':')
 			values = values.split(',')
 
-			dic[setting] = values
-
+			dic[setting] = (values, curr_values[index])
 
 		return dic
 
 
 
-	def create_lbl_btn(self, setting, values):
+	def create_lbl_btn(self, setting, values, curr_value):
 		frame = self
 
 		label = Label(frame, text=setting)
 
 		option_var = StringVar()
+		option_var.set(curr_value)
 		optionmenu = OptionMenu(frame, option_var, *values)
 
 
@@ -85,10 +90,6 @@ class window(Toplevel):
 
 
 
-	def socket_send(self, data, encode=True, encrypt=True):
-		self.controller.socket_send(data, encode, encrypt)
-
-
-
 	def close(self):
 		self.controller.close_config()
+

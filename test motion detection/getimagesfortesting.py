@@ -5,7 +5,6 @@ from datetime import datetime
 from time import sleep, time
 from PIL import ImageTk,Image
 
-# import pickle
 import threading
 import socket
 import config_window
@@ -39,10 +38,10 @@ MAX_LENGTH = 2048
 RUNNING = True
 
 MSE_LIMIT = 120
-SSIM_LIMIT = 0.85
+SSIM_LIMIT = 0.96
 
-#referenac frame for SSIM; should compare against still, undistorted frame
-REFERENCE_FRAME = 'reference.jpg'
+FOLDER = 'test2/'
+IMAGENAME = 'image'
 
 
 
@@ -56,13 +55,14 @@ class Main(Tk):
 		self.socket = socket
 
 		#window
-		self.geometry('964x750+300+200')#width,height,x,y
+		self.geometry('964x700+300+300')#width,height,x,y
 		self.title(IP)#window title
-		self.bind('<F5>', self.update)#bind F5 key to call self.update
+		self.bind('<F5>', self.update)#bind F5 key to call self.manage
 
 
 		#flags
 		self.config_window = None
+		self.image_count = 0
 
 
 		#image
@@ -75,13 +75,9 @@ class Main(Tk):
 
 		self.capturedate_label = Label(self, text='Image captured: n/a')
 		self.mse_label = Label(self, text='MSE: n/a')
-		self.ssim_label = Label(self, text='SSIM: n/a')
 
 
 		#buttons
-		update_btn = Button(self, text='Update', command=self.update)
-		config_btn = Button(self, text='Config', command=self.open_config)
-		use_as_ref_btn = Button(self, text='Use frame as ref', command=self.use_as_ref)
 		update_and_save_btn = Button(self, text='Update and save pic', command=self.update_and_save)
 		completely_quit_btn = Button(self, text='Completely quit', command=self.completely_quit)
 
@@ -92,11 +88,7 @@ class Main(Tk):
 
 		self.capturedate_label.grid()
 		self.mse_label.grid()
-		self.ssim_label.grid()
 
-		update_btn.grid()
-		config_btn.grid()
-		use_as_ref_btn.grid()
 		update_and_save_btn.grid()
 		completely_quit_btn.grid()
 
@@ -109,17 +101,7 @@ class Main(Tk):
 
 	### Update cam settings
 	def update_cam_settings(self, settings):
-		self.socket_send('SET_SETTINGS#%s'%settings)
-
-
-	### Get cam current settings
-	def get_cam_settings(self):
-		self.socket_send('SEND_CAM_SETTINGS#')
-		sleep(0.2)
-		settings = self.socket_receive(length=200, decode=True, decrypt=True)
-		# print('camsettings:',settings)
-		return settings
-
+		...
 
 
 
@@ -139,14 +121,6 @@ class Main(Tk):
 
 		self.config_window = config_window.window(self, 'Configure %s'%IP)
 		self.config_window.mainloop()
-
-
-
-	### Use currently displayed frame as reference frame for SSIM
-	def use_as_ref(self):
-		with open('latest.jpg','rb') as f:
-			data = f.read()
-		write_file('reference.jpg', data)
 
 
 
@@ -171,16 +145,20 @@ class Main(Tk):
 
 
 		#Calculate SSIM
-		ssim = calc_ssim(REFERENCE_FRAME, 'latest.jpg')
+		ssim = calc_ssim('latest.jpg', 'prev.jpg')
 
 
 		if mse >= MSE_LIMIT:
-			print('MSE above limit.\nTime: %s\nFilename: %s'%(time(), latest_filename))
+			print('\nMSE above limit.\nTime: %s\nFilename: %s\n'%(time(), latest_filename))
 		if ssim <= SSIM_LIMIT:
-			print('SSIM below limit.')
+			print('\nSSIM above limit.')
 
-		if (mse >= MSE_LIMIT) or (ssim <= SSIM_LIMIT) or save_pic:
+		if (mse >= MSE_LIMIT) or (ssim >= SSIM_LIMIT) or save_pic:
+			filename = '%s%s%s.jpg'%(FOLDER, IMAGENAME, self.image_count)
+			self.image_count += 1
 			write_file(latest_filename, latest_bytes)
+			self.write_next_image = False
+
 
 		#Update displayed image
 		self.update_image(latest_filename, mse, ssim)
@@ -196,7 +174,6 @@ class Main(Tk):
 
 		self.capturedate_label['text'] = 'Image captured: %s'%capturedate
 		self.mse_label.config(text='MSE: {:,.2f}'.format(mse))
-		self.ssim_label.config(text='SSIM: {:,.3f}'.format(ssim))
 
 
 
@@ -222,7 +199,7 @@ class Main(Tk):
 			if decode:buf = buf.decode()
 
 		except socket.timeout:
-			return b''
+			return -1
 
 		return buf
 

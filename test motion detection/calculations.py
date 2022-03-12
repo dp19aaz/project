@@ -1,18 +1,23 @@
+#https://pyimagesearch.com/2014/09/15/python-compare-two-images/
+
 from skimage.metrics import structural_similarity as ssim
+from cv2 import imread 
+from numpy import sum as npsum
 
-import numpy as np
-import cv2
 
+
+
+### cv2.imread() images
+def read_images(filenameA, filenameB):
+	return imread(filenameA), imread(filenameB)
 
 
 ### Calculate mean squared error given two image filenames
-def calc_mse(self, filenameA, filenameB):
-	#https://pyimagesearch.com/2014/09/15/python-compare-two-images/
-	imageA = cv2.imread(filenameA)
-	imageB = cv2.imread(filenameB)
+def calc_mse(filenameA, filenameB):
+	imageA, imageB = read_images(filenameA, filenameB)
 
 	try:
-		mse = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
+		mse = npsum((imageA.astype("float") - imageB.astype("float")) ** 2)
 		mse /= float(imageA.shape[0] * imageA.shape[1])
 		return mse
 	except:
@@ -20,9 +25,8 @@ def calc_mse(self, filenameA, filenameB):
 
 
 ### Calculate structural similarity given two image filenames
-def calc_ssim(self, filenameA, filenameB, channel_axis=2):
-	imageA = cv2.imread(filenameA)
-	imageB = cv2.imread(filenameB)
+def calc_ssim(filenameA, filenameB, channel_axis=2):
+	imageA, imageB = read_images(filenameA, filenameB)
 
 	try:
 		return ssim(imageA, imageB, channel_axis=channel_axis)

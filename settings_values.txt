@@ -1,9 +1,8 @@
 contrast:-100,-75,-50,0,50,75,100
 brightness:25,50,75
 saturation:-100,-50,0,50,100
-iso:100,200,300,400,500,600,700,800
 exposure:auto,night
 rotation:0,90,180,270
 drc:off,low,medium,high
-quality:25,50,75,100
+zoom:0.1,0.2,0.4,0.6,0.8,0.9,1.0
 dimension:320x200,640x480,960x540,1024x760

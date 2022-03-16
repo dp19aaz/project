@@ -1,6 +1,6 @@
 #https://pyimagesearch.com/2014/09/15/python-compare-two-images/
+#https://ieeexplore-ieee-org.ezproxy.herts.ac.uk/stamp/stamp.jsp?tp=&arnumber=7877503
 
-from skimage.metrics import structural_similarity as ssim
 from cv2 import imread 
 from numpy import sum as npsum
 
@@ -23,12 +23,3 @@ def calc_mse(filenameA, filenameB):
 	except:
 		return -1
 
-
-### Calculate structural similarity index measure given two image filenames
-def calc_ssim(filenameA, filenameB, channel_axis=2):
-	imageA, imageB = read_images(filenameA, filenameB)
-
-	try:
-		return ssim(imageA, imageB, channel_axis=channel_axis)
-	except:
-		return -1

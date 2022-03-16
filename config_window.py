@@ -32,12 +32,8 @@ class window(Toplevel):
 
 
 	def update_cam_settings(self):
-		...
-		#send full settings
 		settings = [i.get() for i in self.entry_variables.values()]
 		settings = ",".join(settings)
-
-		# print(settings)
 
 		self.controller.update_cam_settings(settings)
 

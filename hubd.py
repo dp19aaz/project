@@ -11,28 +11,30 @@ import config_window
 
 
 
-### Print. for testing
+### Print with time of print. For debugging and testing.
 def printm(out, print_time=True, end='\n'):
 	if print_time:
 		print(round(time(),2), end=' | ')
 	print(out, end=end)
 
 
-
-def write_file(latest_filename, latest_bytes):
+### Write bytestream to file
+def write_file(latest_filename, byte_stream):
 	with open(latest_filename, 'wb') as f:
-		f.write(latest_bytes)
+		f.write(byte_stream)
 
 
-
+### Append filename to motionlog.txt
 def append_motion_log(start, new):
-
+	#Get motion log
 	with open('motionlog.txt', 'r') as f:
 		data = f.read()
 
+	#Get start time for each log
 	filenames = data.split('\n')
 	start_times = [i.split(',')[0] for i in filenames]
 
+	#Append new time or create new item
 	if start not in start_times:
 		with open('motionlog.txt', 'a') as f:
 		 	f.write('\n%s,%s'%(start, new))
@@ -43,9 +45,7 @@ def append_motion_log(start, new):
 			f.write('\n'.join(filenames))
 
 
-
-
-### Returns latest.jpg as Pillow image object
+### Returns latest.jpg as Image object (from PIL)
 def open_latest():
 	try:    latest = Image.open('latest.jpg')
 	except: latest = Image.open('noimage.jpg')
@@ -58,14 +58,14 @@ def open_latest():
 with open('cipherkey.txt', 'r') as f:key = f.read()
 CIPHER = AESCipher(key)
 
-DELAY = 0.1
-TIMEOUT = 2
-MAX_LENGTH = 4096
 RUNNING = True
 
+DELAY = 0.1 #delay between requesting pics. mostly for debugging
+TIMEOUT = 2 #timeout for socket receiving
+MAX_LENGTH = 4096 #max length of data per socket.recv()
 
-MSE_LIMIT = 100
-MOTION_COUNT_LIMIT = 2
+MSE_LIMIT = 100 #MSE limit for motion to be considered
+MOTION_COUNT_LIMIT = 2 #no. frames to contain motion to save pics. used to reduce false positives
 
 
 
@@ -86,7 +86,7 @@ class Main(Tk):
 		#flags
 		self.config_window = None
 		self.auto_update = False
-		self.motion_detection_count = 0#no consecutive frames motion is detected
+		self.motion_detection_count = 0 #no. consecutive frames motion is detected
 		self.motion_start_filename = None
 
 
@@ -109,8 +109,8 @@ class Main(Tk):
 
 
 		#buttons
-		update_btn = Button(self, text='Update', command=self.update)
-		config_btn = Button(self, text='Config', command=self.open_config)
+		self.update_btn = Button(self, text='Update', command=self.update)
+		self.config_btn. = Button(self, text='Config', command=self.open_config)
 		self.autoupdate_btn = Button(self, text='Enable autoupdate', command=self.toggle_autoupdate)
 		completely_quit_btn = Button(self, text='Completely quit', command=self.completely_quit)
 
@@ -122,8 +122,8 @@ class Main(Tk):
 		self.capturedate_label.grid(row=1, column=0, columnspan=2, sticky='nesw')
 		self.mse_label.        grid(row=2, column=0, columnspan=1, sticky='nesw')
 
-		update_btn.            grid(row=3, column=0, columnspan=1, sticky='nesw')
-		config_btn.            grid(row=3, column=1, columnspan=1, sticky='nesw')
+		self.update_btn.       grid(row=3, column=0, columnspan=1, sticky='nesw')
+		self.config_btn.       grid(row=3, column=1, columnspan=1, sticky='nesw')
 		self.autoupdate_btn.   grid(row=4, column=0, columnspan=2, sticky='nesw')
 		completely_quit_btn.   grid(row=5, column=0, columnspan=2, sticky='nesw')
 
@@ -136,16 +136,22 @@ class Main(Tk):
 		#toggle flag
 		self.auto_update = not self.auto_update
 
-		if self.auto_update: #enabling
+		if self.auto_update: #enable autoupdate
 			self.autoupdate_btn.config(text='Disable autoupdate')
+			self.update_btn.config(state='disabled')
+			self.config_btn.config(state='disabled')
 
 			self.autoupdate_thread = threading.Thread(target=self.autoupdate)
-			self.autoupdate_thread.start()
+			self.autoupdate_thread.start() #begin autoupdate thread
 
-		else: #disabling
+
+		else: #disable autoupdate
 			self.autoupdate_btn.config(text='Enable autoupdate')	
+			self.update_btn.config(state='normal')
+			self.config_btn.config(state='normal')
+
 			if self.autoupdate_thread:
-				self.autoupdate_thread.join(1)
+				self.autoupdate_thread.join(1) #wait for thread to end
 
 
 
@@ -159,12 +165,6 @@ class Main(Tk):
 
 
 
-	### Save current displayed frame
-	def save_frame(self):
-		...
-
-
-
 	### Update cam settings
 	def update_cam_settings(self, settings):
 		self.socket_send('SET_SETTINGS#%s'%settings)
@@ -173,8 +173,8 @@ class Main(Tk):
 
 	### Get cam current settings
 	def get_cam_settings(self):
-		self.socket_send('SEND_CAM_SETTINGS#')
-		sleep(0.2)
+		self.socket_send('SEND_CAM_SETTINGS#') #request cam settingss
+		sleep(0.01)
 		settings = self.socket_receive(length=200, decode=True, decrypt=True)
 		return settings
 
@@ -203,7 +203,7 @@ class Main(Tk):
 	def update(self, event=None):
 		#Get latest captured image
 			#latest_filename = date and time of image capture
-			#latest_bytes = byte stream of image
+			#latest_bytes    = bytestream of image
 		info = self.get_latest_capture()
 
 		if info:

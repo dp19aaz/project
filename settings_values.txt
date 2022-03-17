@@ -4,5 +4,6 @@ saturation:-100,-50,0,50,100
 exposure:auto,night
 rotation:0,90,180,270
 drc:off,low,medium,high
-zoom:0.1,0.2,0.4,0.6,0.8,0.9,1.0
+zoom_position:top left,top right,bottom left,bottom right,centre
+zoom_amount:0.1,0.2,0.4,0.6,0.8,0.9,1.0
 dimension:320x200,640x480,960x540,1024x760

@@ -44,11 +44,6 @@ class window(Toplevel):
 
 
 
-	def set_menus_to_values(self, values):
-		...
-
-
-
 	def get_option_values(self):
 		curr_values = self.current_settings.split(',')
 

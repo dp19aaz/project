@@ -1,15 +1,20 @@
 from aescipher import AESCipher
 from datetime import datetime
 from time import sleep, time
+from functools import partial
+from os import remove as osremove
 
-import picamera
+# import picamera
 import threading
 import socket
 
 
 
 #Global variables
+global latest_image_unix
+
 with open('cipherkey.txt', 'r') as f:key = f.read()
+assert len(key) in (16, 24, 32), 'cipher key must be of length 16, 24, or 32'
 CIPHER = AESCipher(key)
 
 TIMEOUT = 2
@@ -40,11 +45,16 @@ def socket_send(s, data, encode=True, encrypt=True):
 
 
 ### Send latest captured image to hub
-def send_latest(conn, filename, append_jpg=True):
-	if filename == None:print('Could to find latest image');return -1
-	if append_jpg: filename += '.jpg'
+def send_latest(conn, append_jpg=True):
+	global latest_image_unix
 
-	filename = 'pics/'+filename
+	latest_image_unix, filename = take_pic()
+	# filename = unix_to_date(latest_image_unix)
+
+	# if filename == None:print('Could to find latest image');return -1
+	# if append_jpg: filename += '.jpg'
+
+	# filename = 'pics/'+filename
 
 	#read file
 	with open(filename, 'rb') as f:
@@ -58,6 +68,13 @@ def send_latest(conn, filename, append_jpg=True):
 	
 	#send file
 	socket_send(conn, encrypted_file, encrypt=False, encode=False)
+
+	osremove(filename)
+
+
+### Received unrecognised signal
+def unrecognised_signal(conn, signal):
+	socket_send(conn, '"%s" not recognised.'%signal)
 
 
 ### Respond to ping
@@ -75,11 +92,11 @@ def take_pic(store_pic=True):
 	unix = time()
 	date = unix_to_date(unix)
 
-	filename = 'pics/'+date+'.jpg' if store_pic else latest.jpg
+	filename = 'pics/'+date+'.jpg' if store_pic else 'latest.jpg'
 
 	camera.capture(filename) #take pic and store to filename
 	# print(time(), filename, 'captured.')
-	return unix
+	return unix, filename
 
 
 
@@ -95,18 +112,15 @@ def set_settings(file):
 def update_settings():
 	global camera
 
-	with open('cam_settings.txt', 'r') as f:
-		data = f.read()
+	data = self.get_cam_settings()
 
 	if data.endswith('\n'):data=data[:-1]
 	
 
-	#c  = contrast,       b = brightness,  s  = saturation,
-	#e  = exposure mode,  r = rotation,   drc = drc strength
-	#zp = zoom position, za = zoom amount, re = resolution
-	c,b,s,e,r,drc,zp,za,re = data.split(',')	
-
-	re = [int(i) for i in re.split('x')] #resolution
+	#c  = contrast,       b = brightness,   s = saturation,
+	#e  = exposure mode,  r = rotation,     d = drc strength
+	#zp = zoom position, za = zoom amount
+	c,b,s,e,r,d,zp,za = data.split(',')	
 
 	za = float(za) #zoom amount
 	zxy = 1 - za   #zoom position
@@ -119,14 +133,15 @@ def update_settings():
 	elif zp == 'centre':       z = (zxy/2, zxy/2, za   , za)	
 	else:                      z = (0    , 0    , 1    , 1 )
 
-	camera._set_contrast(int(c))
-	camera._set_brightness(int(b))
-	camera._set_saturation(int(s))
-	camera._set_exposure_mode(e)
-	camera._set_rotation(int(r))
-	camera._set_drc_strength(drc)
-	camera._set_zoom(z)
-	camera._set_resolution(re)
+	c, b, s, r = map(int, (c, b, s, r))
+
+	camera._set_contrast      (c)
+	camera._set_brightness    (b)
+	camera._set_saturation    (s)
+	camera._set_exposure_mode (e)
+	camera._set_rotation      (r)
+	camera._set_drc_strength  (d)
+	camera._set_zoom          (z)
 
 
 
@@ -145,11 +160,13 @@ def get_cam_settings():
 
 
 
+
 ### 
 def handle():
+	global latest_image_unix
 
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	s.bind( (IP, 9090) )
+	s.bind( (IP, PORT) )
 	s.settimeout(TIMEOUT)
 
 	s.listen(1)
@@ -163,33 +180,17 @@ def handle():
 		conn, addr = None, None
 
 
-	latest_image_unix = None
-	latest_image_date = None
-
 
 	while 1:
-
-		if not latest_image_unix:
-			latest_image_unix = take_pic()
-
-		elif (time() - latest_image_unix > 60):
-			latest_image_unix = take_pic()
-
-		if latest_image_unix == -1:
-			sleep(0.5)
-			continue
-		else:
-			latest_image_date = unix_to_date(latest_image_unix)
-
-
 		if not conn:break
 
-
-		#stop waiting for recv after TIMEOUT to take pic
+		#stop waiting for recv after TIMEOUT
 		try:
 			buf = conn.recv(MAX_LENGTH)
+
 		except socket.timeout:
 			continue
+
 		except Exception as err:
 			print(err)
 			break
@@ -206,30 +207,35 @@ def handle():
 
 		signal, value = buf.split('#')
 
-
-		#make factoryclass?
-		if signal == 'PING':
-			pong(conn)
+		method = signal_factory(signal, conn, value)
+		method()
 
 
-		if signal == 'SEND_LATEST':
-			latest_image_unix = take_pic()
-			latest_image_date = unix_to_date(latest_image_unix)
-			send_latest(conn, latest_image_date)
 
 
-		if signal == 'SET_SETTINGS':
-			set_settings(value)
+### Factory method to get method to deal with received command
+def signal_factory(signal, conn, value):
+	hashmap = {
+	 'PING':              (pong, conn)
+	,'SEND_LATEST':       (send_latest, conn)
+	,'SET_SETTINGS':      (set_settings, value)
+	,'SEND_CAM_SETTINGS': (send_cam_settings, conn)
+	}
+
+	if signal in hashmap:
+		return partial(*hashmap[signal])
+	else:
+		return partial(unrecognised_signal, signal)
 
 
-		if signal == 'SEND_CAM_SETTINGS':
-			send_cam_settings(conn)
+
 
 
 
 ###############
 
-IP = '192.168.0.21'
+PORT = 9090
+IP = '192.168.0.17'
 
 
 
@@ -238,6 +244,7 @@ while 1:
 
 	#setup camera
 	camera = picamera.PiCamera()
+	camera._set_resolution( (960,540) )
 	# update_settings()
 
 	try:

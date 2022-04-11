@@ -1,15 +1,24 @@
+##############################################################
+#
+# Title        : AESCipher
+# Author       : mnothic (stackoverflow user)
+# Date         : 2014
+# Availability : https://stackoverflow.com/questions/12524994/encrypt-decrypt-using-pycrypto-aes-256
+#
+##############################################################
+
 from base64 import b64decode, b64encode
 from hashlib import sha256
-
 from Crypto import Random
 from Crypto.Cipher import AES
+
 
 class AESCipher(object):
 
 	def __init__(self, key): 
 		self.bs = AES.block_size
-		self.key = sha256(key.encode()).digest()
-		# self.key=key
+		# self.key = sha256(key.encode()).digest()
+		self.key = key.encode()
 
 	def encrypt(self, raw):
 		raw = self._pad(raw)
@@ -21,7 +30,7 @@ class AESCipher(object):
 		enc = b64decode(enc)
 		iv = enc[:AES.block_size]
 		cipher = AES.new(self.key, AES.MODE_CBC, iv)
-		return self._unpad(cipher.decrypt(enc[AES.block_size:]))#.decode('utf-8')
+		return self._unpad(cipher.decrypt(enc[AES.block_size:]))
 
 	def _pad(self, s):
 		padding = (self.bs - len(s) % self.bs) * chr(self.bs - len(s) % self.bs).encode()
@@ -33,20 +42,22 @@ class AESCipher(object):
 
 
 
-def main(msg, key):
-	cipher = AESCipher(key)
-
-	print(msg, len(msg))
-
-	enc = cipher.encrypt(msg.encode())
-	print(enc, len(enc))
-
-	dec = cipher.decrypt(enc).decode()
-	print(dec)
-
 
 
 
 if __name__ == '__main__':
+
+	def main(msg, key):
+		cipher = AESCipher(key)
+
+		enc = cipher.encrypt(msg.encode())
+		dec = cipher.decrypt(enc).decode()
+
+		print(msg, len(msg))
+		print(enc, len(enc))
+
+
 	main('go left', '12345678901234567890123456789012')#32 characters
-	# print(AES.block_size)
+	main('go left', '123456789012345678901234')#24 characters
+	main('go left', '1234567890123456')#16 characters
+	# main('go left', '12345678')#8 characters

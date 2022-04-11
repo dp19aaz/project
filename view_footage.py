@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter.ttk import Separator
 from calculations import *
 from PIL import ImageTk,Image
+from os import remove as osremove
 
 
 class Main(Tk):
@@ -17,6 +18,8 @@ class Main(Tk):
 		print(filenames)
 
 		self.i = 0
+
+		self.show_mse = True
 
 		prev, latest = self.open_images(self.i)
 
@@ -42,7 +45,7 @@ class Main(Tk):
 		self.nextbtn = Button(self, text='next', command=self.next)
 
 		self.deletebtn = Button(self, text='delete pics', command=self.delete_pics)
-
+		self.show_mse_rbtn = RadioButton(self, text='show MSE values', variable=self.show_mse)
 
 		self.mse_lbl = Label(self, text='mse')
 
@@ -59,6 +62,7 @@ class Main(Tk):
 		self.prevbtn.          grid(row=2, column=0, sticky='nesw')
 		self.nextbtn.          grid(row=2, column=1, sticky='nesw')
 		self.deletebtn.        grid(row=3, column=0, sticky='nesw')
+		self.show_mse_rbtn.    grid(row=3, column=1, sticky='nesw')
 
 
 	def get_filenames(self, i):
@@ -69,6 +73,7 @@ class Main(Tk):
 
 	def open_images(self, i):
 		prev, latest = self.get_filenames(i)
+
 		prev = Image.open(prev)
 		latest = Image.open(latest)
 
@@ -76,7 +81,7 @@ class Main(Tk):
 
 
 	def update_lbls(self, prev, latest, i):
-		mse = calc_mse(prev, latest)
+		mse = calc_mse(prev, latest) if self.show_mse else -1
 
 		self.mse_lbl.config(text='MSE: {:,.2f}'.format(mse))
 
@@ -91,9 +96,9 @@ class Main(Tk):
 
 
 
-	def update_title(self, prev, latest):
+	def update_title(self, prev, latest, i):
 		prev, latest = prev.split('/')[1], latest.split('/')[1]
-		self.title('%s, %s'%(prev, latest))
+		self.title('%s, %s. (%s/%s)'%(prev, latest, i+1, len(self.filenames)-1))
 
 
 	def prev(self, event=None):
@@ -107,7 +112,7 @@ class Main(Tk):
 
 		prev, latest = self.get_filenames(i)
 		self.update_lbls(prev, latest, i)
-		self.update_title(prev, latest)
+		self.update_title(prev, latest, i)
 
 
 
@@ -117,7 +122,7 @@ class Main(Tk):
 		self.i += 1
 		i = self.i
 
-		print(self.i, len(self.filenames))
+		# print(self.i, len(self.filenames))
 
 		self.prevbtn.config(state='normal')
 		if i == len(self.filenames)-2:self.nextbtn.config(state='disabled')
@@ -125,7 +130,7 @@ class Main(Tk):
 
 		prev, latest = self.get_filenames(i)
 		self.update_lbls(prev, latest, i)
-		self.update_title(prev, latest)
+		self.update_title(prev, latest, i)
 
 
 	def mouse_wheel(self, event):
@@ -136,8 +141,17 @@ class Main(Tk):
 
 
 	def delete_pics(self):
-		...#delete picture files
+		self.delete_images()
 		self.delete_from_motionlog()
+		self.destroy()
+
+
+	def delete_images(self):
+		print(self.filenames)
+		for filename in self.filenames:
+			print(filename)
+			filename = 'pics/%s.jpg'%filename
+			osremove(filename)
 
 
 
@@ -173,7 +187,8 @@ def main():
 
 	print('\n'.join(['%s\t%s, %s'%(index, time, motions[index].count(',')+1) for index, time in enumerate(start_times)]))
 
-	choice = 2
+	choice = int(input('Select a collection of frames to view.'))
+	# choice = 2
 	Main(motions[choice].split(',')).mainloop()
 
 

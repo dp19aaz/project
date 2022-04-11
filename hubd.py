@@ -14,13 +14,15 @@ import config_window
 ### Print with time of print. For debugging and testing.
 def printm(out, print_time=True, end='\n'):
 	if print_time:
-		print(round(time(),2), end=' | ')
+		# print(round(time(),2), end=' | ')
+		print('{:.2f}'.format(time()), end=' | ')
 	print(out, end=end)
 
 
+
 ### Write bytestream to file
-def write_file(latest_filename, byte_stream):
-	with open(latest_filename, 'wb') as f:
+def write_file(filename, byte_stream):
+	with open(filename, 'wb') as f:
 		f.write(byte_stream)
 
 
@@ -37,7 +39,8 @@ def append_motion_log(start, new):
 	#Append new time or create new item
 	if start not in start_times:
 		with open('motionlog.txt', 'a') as f:
-		 	f.write('\n%s,%s'%(start, new))
+		 	# f.write('\n%s,%s'%(start, new))
+		 	f.write('\n%s'%(start))
 
 	else:
 		filenames[start_times.index(start)] += ',%s'%new
@@ -56,15 +59,16 @@ def open_latest():
 
 #Global variables
 with open('cipherkey.txt', 'r') as f:key = f.read()
+assert len(key) in (16, 24, 32), 'cipher key must be of length 16, 24, or 32'
 CIPHER = AESCipher(key)
 
 RUNNING = True
 
-DELAY = 0.1 #delay between requesting pics. mostly for debugging
+DELAY = 0.1 #delay between autoupdates. mostly for debugging
 TIMEOUT = 2 #timeout for socket receiving
 MAX_LENGTH = 4096 #max length of data per socket.recv()
 
-MSE_LIMIT = 100 #MSE limit for motion to be considered
+MSE_LIMIT = 100 #MSE limit for motion to be considered detected
 MOTION_COUNT_LIMIT = 2 #no. frames to contain motion to save pics. used to reduce false positives
 
 
@@ -78,7 +82,7 @@ class Main(Tk):
 		self.socket = socket
 
 		#window
-		self.geometry('964x750+300+200')#width,height,x,y
+		self.geometry('964x700+300+200')#width,height,x,y
 		self.title(IP)#window title
 		self.bind('<F5>', self.update)#bind F5 key to call self.update
 
@@ -86,8 +90,14 @@ class Main(Tk):
 		#flags
 		self.config_window = None
 		self.auto_update = False
+		
+		self.do_save_all = False
+
+		self.do_motion_detection = True
 		self.motion_detection_count = 0 #no. consecutive frames motion is detected
 		self.motion_start_filename = None
+
+		self.prev_filename_capture = None
 
 
 		#threads
@@ -110,8 +120,17 @@ class Main(Tk):
 
 		#buttons
 		self.update_btn = Button(self, text='Update', command=self.update)
-		self.config_btn. = Button(self, text='Config', command=self.open_config)
-		self.autoupdate_btn = Button(self, text='Enable autoupdate', command=self.toggle_autoupdate)
+		self.config_btn = Button(self, text='Config', command=self.open_config)
+
+		self.autoupdate_btn = Button(self, text='Enable autoupdate',
+			command=self.toggle_autoupdate)
+		
+		self.mot_det_btn = Button(self, text='Disable motion detection',
+			command=self.toggle_motion_detection)
+		
+		self.save_all_btn = Button(self, text='Save all images',
+			command=self.toggle_save_all)
+
 		completely_quit_btn = Button(self, text='Completely quit', command=self.completely_quit)
 
 
@@ -125,13 +144,49 @@ class Main(Tk):
 		self.update_btn.       grid(row=3, column=0, columnspan=1, sticky='nesw')
 		self.config_btn.       grid(row=3, column=1, columnspan=1, sticky='nesw')
 		self.autoupdate_btn.   grid(row=4, column=0, columnspan=2, sticky='nesw')
-		completely_quit_btn.   grid(row=5, column=0, columnspan=2, sticky='nesw')
+		self.mot_det_btn.      grid(row=5, column=0, columnspan=1, sticky='nesw')
+		self.save_all_btn.     grid(row=5, column=1, columnspan=1, sticky='nesw')
+		completely_quit_btn.   grid(row=6, column=0, columnspan=2, sticky='nesw')
 
 			#master=self.image_canvas
 		self.latestlabel.grid(row=0, column=0, columnspan=1, sticky='nesw')
 
 
-	### Toggle or enable/disable auto_update
+
+	### Toggle motion detection
+	def toggle_motion_detection(self, set_to=None):
+		#toggle flag
+		if set_to: self.do_motion_detection = set_to
+		else:      self.do_motion_detection = not self.do_motion_detection
+
+		#change button text
+		if self.do_motion_detection: #enable motion detection
+			self.mot_det_btn.config(text='Disable motion detection')
+
+		else: #disable motion detection
+			self.mot_det_btn.config(text='Enable motion detection')
+
+
+
+	### Toggle saving all images
+	def toggle_save_all(self):
+		#toggle flag
+		self.do_save_all = not self.do_save_all
+
+		if self.do_save_all: #enable saving all images
+			self.save_all_btn.config(text='Disable saving every frame')
+			self.toggle_motion_detection(set_to=False)
+			self.mot_det_btn.config(state='disabled')
+
+
+		else: #disable saving all images
+			self.save_all_btn.config(text='Enable saving every frame')
+			self.mot_det_btn.config(state='normal')
+
+
+
+
+	### Toggle auto_update
 	def toggle_autoupdate(self):
 		#toggle flag
 		self.auto_update = not self.auto_update
@@ -161,7 +216,64 @@ class Main(Tk):
 
 		while self.auto_update and RUNNING:
 			self.update()
-			# sleep(DELAY)
+			sleep(DELAY)
+
+		# if self.auto_update: self.toggle_autoupdate()
+		if self.auto_update: self.auto_update = False
+
+
+
+	### Main thread
+	def update(self, event=None):
+		#Get latest captured image
+			#latest_filename = date and time of image capture
+			#latest_bytes    = bytestream of image
+
+		try:    latest_filename, latest_bytes = self.get_latest_capture()
+		except: return
+
+		if latest_filename == self.prev_filename_capture:return
+
+		#Motion detection and image saving
+		do_write = self.do_save_all
+
+		if self.do_motion_detection:
+			mse = calc_mse('latest.jpg', 'prev.jpg')
+
+			if mse >= MSE_LIMIT:
+				self.motion_detection_count += 1
+				do_write = True
+
+				if not self.motion_start_filename:
+					self.motion_start_filename = latest_filename.split('/')[1][:-4]
+
+			else:
+				self.motion_detection_count //= 2#div 2. similar to int(x/2)
+
+
+
+			if self.motion_detection_count >= MOTION_COUNT_LIMIT:
+				print('Motion detected.',self.motion_detection_count)
+				append_motion_log(self.motion_start_filename, latest_filename.split('/')[1][:-4])
+
+				do_write = True
+
+
+			else:
+				self.motion_start_filename = None
+		
+		else:#self.do_motion_detection is false
+			mse = -1
+
+		if do_write:
+			write_file(latest_filename, latest_bytes)
+
+
+		#Update displayed image
+		self.update_image(latest_filename, mse)
+
+
+		self.prev_filename_capture = latest_filename
 
 
 
@@ -192,58 +304,10 @@ class Main(Tk):
 	def open_config(self):
 		#check if config window already open
 		if self.config_window:
-			return
+			self.close_config()
 
 		self.config_window = config_window.window(self, 'Configure %s'%IP)
 		self.config_window.mainloop()
-
-
-
-	### Main thread
-	def update(self, event=None):
-		#Get latest captured image
-			#latest_filename = date and time of image capture
-			#latest_bytes    = bytestream of image
-		info = self.get_latest_capture()
-
-		if info:
-			latest_filename, latest_bytes = info
-		else:
-			return
-
-
-		#If image captured too long ago, check for errors
-		...
-
-
-		#Motion detection
-		mse = calc_mse('latest.jpg', 'prev.jpg')
-
-		if mse >= MSE_LIMIT:
-			self.motion_detection_count += 1
-			write_file(latest_filename, latest_bytes)
-
-			if not self.motion_start_filename:
-				self.motion_start_filename = latest_filename.split('/')[1][:-4]
-
-		else:
-			self.motion_detection_count //= 2#div 2. similar to int(x/2)
-
-
-
-		if self.motion_detection_count >= MOTION_COUNT_LIMIT:
-			print('Motion detected.',self.motion_detection_count)
-			append_motion_log(self.motion_start_filename, latest_filename.split('/')[1][:-4])
-
-			if mse < MSE_LIMIT:
-				write_file(latest_filename, latest_bytes)
-
-		else:
-			self.motion_start_filename = None
-
-
-		#Update displayed image
-		self.update_image(latest_filename, mse)
 
 
 
@@ -254,12 +318,16 @@ class Main(Tk):
 		self.latestlabel.config(image=self.tkimagelatest) 
 
 		self.capturedate_label['text'] = 'Image captured: %s'%capturedate
-		self.mse_label.config (text= 'MSE: {:,.2f}'.format(mse))
+
+		mse_text = 'MSE: {:,.2f}'.format(mse) if mse != -1 else 'MSE: n/a'
+
+		self.mse_label.config (text=mse_text)
 
 
 
 	### Send data via self.socket
 	def socket_send(self, data, encode=True, encrypt=True):
+
 		if encode:  data = data.encode()
 		if encrypt: data = CIPHER.encrypt(data)
 
@@ -279,6 +347,7 @@ class Main(Tk):
 			if decode:  buf = buf.decode()
 
 		except socket.timeout:
+			printm('sockettimeout')
 			return b''
 
 		return buf
@@ -287,7 +356,6 @@ class Main(Tk):
 
 	### Request and receive latest captured image
 	def get_latest_capture(self):
-
 
 		#Request file
 		self.socket_send('SEND_LATEST#')
@@ -302,7 +370,6 @@ class Main(Tk):
 
 		#Receive file data
 		file = b''
-
 		while len(file) < filesize:
 			buf = self.socket_receive(decode=False, decrypt=False)
 			if buf == -1:
@@ -316,15 +383,13 @@ class Main(Tk):
 		try:
 			with open('latest.jpg', 'rb') as f:
 				data = f.read()
-			with open('prev.jpg', 'wb') as f:
-				f.write(data)
+			write_file('prev.jpg', data)
 		except FileNotFoundError:
 			pass
 
 
 		#Write file
-		with open('latest.jpg', 'wb') as f:
-			f.write(file)
+		write_file('latest.jpg', file)
 
 
 		return filename, file
@@ -348,7 +413,7 @@ class Main(Tk):
 
 PORT = 9090
 # IP = input('IP of camera:')
-IP = '192.168.0.21'
+IP = '192.168.0.17'
 
 
 while RUNNING:
@@ -367,6 +432,7 @@ while RUNNING:
 		printm('Connected.', print_time=False)
 	except socket.timeout:
 		printm('Timed out.', print_time=False)
+		sleep(1)
 		continue
 
 

@@ -4,14 +4,14 @@ from time import sleep, time
 from functools import partial
 from os import remove as osremove
 
-# import picamera
+import picamera
 import threading
 import socket
 
 
 
 #Global variables
-global latest_image_unix
+global latest_image_unix, s
 
 with open('cipherkey.txt', 'r') as f:key = f.read()
 assert len(key) in (16, 24, 32), 'cipher key must be of length 16, 24, or 32'
@@ -38,7 +38,7 @@ def date_to_unix(date):
 
 
 ### Send data
-def socket_send(s, data, encode=True, encrypt=True):
+def socket_send(data, encode=True, encrypt=True):
 	if encode :data = data.encode()
 	if encrypt:data = CIPHER.encrypt(data)
 	s.sendall(data)
@@ -163,7 +163,7 @@ def get_cam_settings():
 
 ### 
 def handle():
-	global latest_image_unix
+	global latest_image_unix, s
 
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.bind( (IP, PORT) )
@@ -240,7 +240,7 @@ IP = '192.168.0.17'
 
 
 while 1:
-	global camera
+	global camera, s
 
 	#setup camera
 	camera = picamera.PiCamera()
@@ -255,6 +255,8 @@ while 1:
 		while camThread.is_alive():
 			camThread.join(1)
 		camThread.run()
+
+		s.close()
 	except Exception as err:
 		print(err)
 
@@ -262,4 +264,4 @@ while 1:
 	# close cam if client disconnects
 	camera.close()
 
-	sleep(1)
+	sleep(2)

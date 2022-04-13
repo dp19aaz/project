@@ -1,4 +1,4 @@
-contrast:-100,-50,0,50,100
+contrast:-50,0,50,100
 brightness:25,50,75
 saturation:-100,-50,0,50,100
 exposure:auto,night

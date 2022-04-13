@@ -7,6 +7,7 @@ from PIL import ImageTk,Image
 
 import threading
 import socket
+import tkinter.ttk as ttk
 import config_window
 
 
@@ -14,7 +15,6 @@ import config_window
 ### Print with time of print. For debugging and testing.
 def printm(out, print_time=True, end='\n'):
 	if print_time:
-		# print(round(time(),2), end=' | ')
 		print('{:.2f}'.format(time()), end=' | ')
 	print(out, end=end)
 
@@ -64,12 +64,14 @@ CIPHER = AESCipher(key)
 
 RUNNING = True
 
-DELAY = 0.1 #delay between autoupdates. mostly for debugging
-TIMEOUT = 2 #timeout for socket receiving
+PORT = 9090
+
+# DELAY = 0.1 #delay between autoupdates. mostly for debugging
+# TIMEOUT = 2 #timeout for socket receiving
 MAX_LENGTH = 4096 #max length of data per socket.recv()
 
-MSE_LIMIT = 100 #MSE limit for motion to be considered detected
-MOTION_COUNT_LIMIT = 2 #no. frames to contain motion to save pics. used to reduce false positives
+# MSE_LIMIT = 100 #MSE limit for motion to be considered detected
+# MOTION_COUNT_LIMIT = 2 #no. frames to contain motion to save pics. used to reduce false positives
 
 
 
@@ -94,7 +96,7 @@ class Main(Tk):
 		self.do_save_all = False
 
 		self.do_motion_detection = True
-		self.motion_detection_count = 0 #no. consecutive frames motion is detected
+		self.motion_detection_count = 0 #no. consecutive frames where motion is detected
 		self.motion_start_filename = None
 
 		self.prev_filename_capture = None
@@ -119,7 +121,7 @@ class Main(Tk):
 
 
 		#buttons
-		self.update_btn = Button(self, text='Update', command=self.update)
+		self.update_btn = Button(self, text='Update once', command=self.update)
 		self.config_btn = Button(self, text='Config', command=self.open_config)
 
 		self.autoupdate_btn = Button(self, text='Enable autoupdate',
@@ -252,7 +254,7 @@ class Main(Tk):
 
 
 
-			if self.motion_detection_count >= MOTION_COUNT_LIMIT:
+			if self.motion_detection_count >= MC_LIMIT:
 				print('Motion detected.',self.motion_detection_count)
 				append_motion_log(self.motion_start_filename, latest_filename.split('/')[1][:-4])
 
@@ -336,9 +338,10 @@ class Main(Tk):
 
 
 	### Receive data via self.socket
-	def socket_receive(self, length=MAX_LENGTH, timeout=TIMEOUT, decode=False, decrypt=True):
+	def socket_receive(self, length=MAX_LENGTH, decode=False, decrypt=True):
+
 		s = self.socket
-		s.settimeout(timeout)
+		s.settimeout(TIMEOUT)
 
 		try:
 			buf = s.recv(length)
@@ -411,39 +414,150 @@ class Main(Tk):
 
 
 
-PORT = 9090
-# IP = input('IP of camera:')
-IP = '192.168.0.17'
 
 
-while RUNNING:
-	sleep(1)
 
 
-	#create socket
-	printm('Connecting...', end='')
-	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	s.settimeout(TIMEOUT)
+#OptionMenu values. index0 is default
+MSE_LIMIT_VALUES = (100, 25, 50, 75, 150, 200, 350, 500)
+MC_LIMIT_VALES   = (2, 3, 4, 5, 6, 1)
+DELAY_VALUES     = (0.1, 0.3, 0.5, 0.7, 1, 2, 0)
+TIMEOUT_VALUES   = (2, 1, 3, 5, 10)
 
 
-	#attempt connecting to camera
-	try:
-		s.connect( (IP, PORT) )
-		printm('Connected.', print_time=False)
-	except socket.timeout:
-		printm('Timed out.', print_time=False)
+
+### Setup window
+class setup(Tk):
+	def __init__(self):
+		super().__init__()
+
+		input_frame = Frame(self)
+		main_frame = Frame(self)
+
+		options = (
+			  ('MSE Limit', IntVar, MSE_LIMIT_VALUES, input_frame)
+			, ('Motion count limit', IntVar, MC_LIMIT_VALES, input_frame)
+			, ('Autoupdate delay', DoubleVar, DELAY_VALUES, input_frame)
+			, ('Socket timeout', IntVar, TIMEOUT_VALUES, input_frame)
+			  )
+
+		self.vars = []
+
+		for index, option in enumerate(options):
+			tmp = inputdata(*option)
+			tmp.grid(row=index, column=0)
+			self.vars.append(tmp)
+
+
+		def ip_vcmd(d,i,P,s,S,v,V,W):
+			#d:action           i:index            P:value_if_allowed  s:prior_value
+			#S:text inserted    v:validation_type  V:trigger_type      W:widget_name
+
+			#example ips: 192.168.0.17
+			#all checks must be true or input is invalid
+			checks = (
+				  S.isdigit() or S=='.'
+				, P.count('.') <= 3
+				, len(P) <= 15
+				)
+
+			
+			for check in checks:
+				if not check: return False
+
+			return True
+
+		reg_ip_vcmd = (self.register(ip_vcmd), '%d','%i','%P','%s','%S','%v','%V','%W')
+
+
+		ip_lbl = Label(input_frame, text='IP')
+		self.ip_ent = Entry(input_frame, validate='key', vcmd=reg_ip_vcmd)
+		
+		ip_lbl.     grid(row=index+1, column=0, sticky='w')
+		self.ip_ent.grid(row=index+1, column=1, sticky='nesw')
+
+
+
+		confirm_btn = Button(main_frame, text='Confirm', command=self.confirm)
+		confirm_btn.grid(row=0, column=0)
+
+
+
+		input_frame.grid(row=0, column=0)
+		ttk.Separator(self, orient='horizontal').grid(
+			             row=1, column=0, sticky='nesw', pady=12)
+		main_frame. grid(row=2, column=0)
+
+
+	def confirm(self):
+
+		#mse_limit, mc_limit, delay, timeout, ip
+		values = [var.get_value() for var in self.vars]
+		values.append(self.ip_ent.get())
+		print(values)
+
+		global MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP
+		MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP = values
+
+		self.destroy()
+
+
+
+
+
+class inputdata:
+	def __init__(self, text, var_type, options, frame):
+		self.var = var_type()
+		self.var.set(options[0])
+		self.lbl = Label(frame, text=text)
+		self.opt = OptionMenu(frame, self.var, *options)
+
+
+	def get_value(self):
+		return self.var.get()
+
+
+	def grid(self, row, column):
+		self.lbl.grid(row=row, column=column  , sticky='w')
+		self.opt.grid(row=row, column=column+1, sticky='nesw')
+
+
+
+
+
+
+
+def main():
+	print(IP, 'starting.')
+	while RUNNING:
 		sleep(1)
-		continue
 
 
-	#open tk window to run main program
-	try:
-		main = Main(s)
-		main.mainloop()
-	except Exception as err:
-		printm(err)
+		#create socket
+		printm('Connecting...', end='')
+		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		s.settimeout(TIMEOUT)
 
 
-	#close socket
-	try:    s.close()
-	except: pass
+		#attempt connecting to camera
+		try:
+			s.connect( (IP, PORT) )
+			printm('Connected.', print_time=False)
+		except socket.timeout:
+			printm('Timed out.', print_time=False)
+			sleep(1)
+			continue
+
+
+		#open tk window to run main program
+		try:
+			main = Main(s)
+			main.mainloop()
+			s.close()#close socket
+		except Exception as err:
+			printm(err)
+
+
+if __name__ == '__main__':
+	setup().mainloop()
+	main()

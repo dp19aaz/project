@@ -39,25 +39,3 @@ class AESCipher(object):
 	@staticmethod
 	def _unpad(s):
 		return s[:-ord(s[len(s)-1:])]
-
-
-
-
-
-
-if __name__ == '__main__':
-
-	def main(msg, key):
-		cipher = AESCipher(key)
-
-		enc = cipher.encrypt(msg.encode())
-		dec = cipher.decrypt(enc).decode()
-
-		print(msg, len(msg))
-		print(enc, len(enc))
-
-
-	main('go left', '12345678901234567890123456789012')#32 characters
-	main('go left', '123456789012345678901234')#24 characters
-	main('go left', '1234567890123456')#16 characters
-	# main('go left', '12345678')#8 characters

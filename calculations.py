@@ -4,6 +4,14 @@ from numpy import sum as npsum
 
 ### Calculate mean squared error given two image filenames
 def calc_mse(filenameA, filenameB):
+	##############################################################
+	#
+	# Title        : MSE Function in Python
+	# Author       : Arora et al.
+	# Date         : 2016
+	# Availability : https://ieeexplore.ieee.org/document/7877503
+	#
+	##############################################################
 	imageA, imageB = imread(filenameA), imread(filenameB)
 
 	try:

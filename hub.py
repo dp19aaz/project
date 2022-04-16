@@ -8,7 +8,6 @@ from PIL import ImageTk,Image
 import threading
 import socket
 import tkinter.ttk as ttk
-import config_window
 
 
 
@@ -57,25 +56,21 @@ def open_latest():
 
 
 
-#Global variables
+###########################
+### Global variables
+###########################
 with open('cipherkey.txt', 'r') as f:key = f.read()
 assert len(key) in (16, 24, 32), 'cipher key must be of length 16, 24, or 32'
 CIPHER = AESCipher(key)
 
-RUNNING = True
-
-PORT = 9090
-
-# DELAY = 0.1 #delay between autoupdates. mostly for debugging
-# TIMEOUT = 2 #timeout for socket receiving
+RUNNING = False
 MAX_LENGTH = 4096 #max length of data per socket.recv()
 
-# MSE_LIMIT = 100 #MSE limit for motion to be considered detected
-# MOTION_COUNT_LIMIT = 2 #no. frames to contain motion to save pics. used to reduce false positives
 
 
-
+###########################
 ### Main window
+###########################
 class Main(Tk):
 	def __init__(self, socket):
 		super().__init__()
@@ -94,7 +89,6 @@ class Main(Tk):
 		self.auto_update = False
 		
 		self.do_save_all = False
-
 		self.do_motion_detection = True
 		self.motion_detection_count = 0 #no. consecutive frames where motion is detected
 		self.motion_start_filename = None
@@ -308,7 +302,7 @@ class Main(Tk):
 		if self.config_window:
 			self.close_config()
 
-		self.config_window = config_window.window(self, 'Configure %s'%IP)
+		self.config_window = config_window(self, 'Configure %s'%IP)
 		self.config_window.mainloop()
 
 
@@ -394,6 +388,8 @@ class Main(Tk):
 		#Write file
 		write_file('latest.jpg', file)
 
+		self.prev_filename_capture = filename
+
 
 		return filename, file
 
@@ -413,26 +409,118 @@ class Main(Tk):
 
 
 
+###########################
+### Config window
+###########################
+class config_window(Toplevel):
+	def __init__(self, controller, title):
+		super().__init__()
+
+		self.controller = controller
+
+		self.resizable(width=False, height=False)
+		self.title(title)
+
+
+		self.current_settings = self.get_cam_settings()
+
+		self.entry_variables = {}
+		self.settings_values_dictionary = self.get_option_values()
+
+
+
+		for index, setting in enumerate(self.settings_values_dictionary.keys()):
+			values, curr_value = self.settings_values_dictionary[setting]
+
+			option_var = self.create_lbl_btn(setting, values, curr_value, index)
+			self.entry_variables[setting] = option_var
+
+		ttk.Separator(self, orient='horizontal').grid(columnspan=2, sticky='nesw', pady=12)
+
+		update_settings_btn = Button(self, text='Update settings', command=self.update_cam_settings)
+		update_settings_btn.grid(columnspan=2, sticky='nesw')
+
+
+	def update_cam_settings(self):
+		settings = [i.get() for i in self.entry_variables.values()]
+		settings = ",".join(settings)
+
+		self.controller.update_cam_settings(settings)
+
+
+
+	def get_cam_settings(self):
+		return self.controller.get_cam_settings()
+
+
+
+	def get_option_values(self):
+		curr_values = self.current_settings.split(',')
+
+		with open('settings_values.txt', 'r') as f:
+			data = f.read()	
+
+		data = data.split('\n')
+
+		dic = {}
+		for index, line in enumerate(data):
+			setting, values = line.split(':')
+			values = values.split(',')
+
+			dic[setting] = (values, curr_values[index])
+
+		return dic
+
+
+
+	def create_lbl_btn(self, setting, values, curr_value, index):
+		frame = self
+
+		label = Label(frame, text=setting)
+
+		option_var = StringVar()
+		option_var.set(curr_value)
+		optionmenu = OptionMenu(frame, option_var, *values)
+
+
+
+		label.     grid(row=index, column=0, sticky='nesw')
+		optionmenu.grid(row=index, column=1, sticky='nesw')
+
+		return option_var
+
+
+
+	def close(self):
+		self.controller.close_config()
 
 
 
 
 
-#OptionMenu values. index0 is default
-MSE_LIMIT_VALUES = (100, 25, 50, 75, 150, 200, 350, 500)
-MC_LIMIT_VALES   = (2, 3, 4, 5, 6, 1)
-DELAY_VALUES     = (0.1, 0.3, 0.5, 0.7, 1, 2, 0)
-TIMEOUT_VALUES   = (2, 1, 3, 5, 10)
-
-
-
+###########################
 ### Setup window
+###########################
 class setup(Tk):
 	def __init__(self):
 		super().__init__()
 
 		input_frame = Frame(self)
 		main_frame = Frame(self)
+
+
+
+		#optionmenus
+
+		#OptionMenu values. index0 is default
+		MSE_LIMIT_VALUES = (100, 25, 50, 75, 150, 200, 350, 500)
+		MC_LIMIT_VALES   = (2, 3, 4, 5, 6, 1, 0)
+		DELAY_VALUES     = (0.1, 0.3, 0.5, 0.7, 1, 2, 0)
+		TIMEOUT_VALUES   = (2, 1, 3, 5, 10)
+
+
+		#create optionmenus
+		self.vars = []
 
 		options = (
 			  ('MSE Limit', IntVar, MSE_LIMIT_VALUES, input_frame)
@@ -441,34 +529,33 @@ class setup(Tk):
 			, ('Socket timeout', IntVar, TIMEOUT_VALUES, input_frame)
 			  )
 
-		self.vars = []
-
 		for index, option in enumerate(options):
-			tmp = inputdata(*option)
+			tmp = self.inputdata(*option)
 			tmp.grid(row=index, column=0)
 			self.vars.append(tmp)
 
 
-		def ip_vcmd(d,i,P,s,S,v,V,W):
-			#d:action           i:index            P:value_if_allowed  s:prior_value
-			#S:text inserted    v:validation_type  V:trigger_type      W:widget_name
 
-			#example ips: 192.168.0.17
+		#ip entry
+
+		#tk entry validation command. to check if input/data is valid
+		def ip_vcmd(P,s,S):
+			#P:value_if_allowed      s:prior_value      S:text inserted
+
+			#example valid ip: 192.168.0.17
 			#all checks must be true or input is invalid
 			checks = (
 				  S.isdigit() or S=='.'
 				, P.count('.') <= 3
 				, len(P) <= 15
 				)
-
 			
 			for check in checks:
 				if not check: return False
 
 			return True
 
-		reg_ip_vcmd = (self.register(ip_vcmd), '%d','%i','%P','%s','%S','%v','%V','%W')
-
+		reg_ip_vcmd = (self.register(ip_vcmd), '%P','%s','%S')#register vcmd
 
 		ip_lbl = Label(input_frame, text='IP')
 		self.ip_ent = Entry(input_frame, validate='key', vcmd=reg_ip_vcmd)
@@ -477,11 +564,13 @@ class setup(Tk):
 		self.ip_ent.grid(row=index+1, column=1, sticky='nesw')
 
 
+		#confirm
 
 		confirm_btn = Button(main_frame, text='Confirm', command=self.confirm)
 		confirm_btn.grid(row=0, column=0)
 
 
+		#geometry management
 
 		input_frame.grid(row=0, column=0)
 		ttk.Separator(self, orient='horizontal').grid(
@@ -496,38 +585,43 @@ class setup(Tk):
 		values.append(self.ip_ent.get())
 		print(values)
 
-		global MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP
+		global MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP, RUNNING, PORT
 		MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP = values
+		RUNNING = True
+		PORT = 9090
 
 		self.destroy()
 
 
 
+	#label & optionmenu item for setup window
+	class inputdata:
+		def __init__(self, text, var_type, options, frame):
+			self.var = var_type()
+			self.var.set(options[0])
+			self.lbl = Label(frame, text=text)
+			self.opt = OptionMenu(frame, self.var, *options)
 
 
-class inputdata:
-	def __init__(self, text, var_type, options, frame):
-		self.var = var_type()
-		self.var.set(options[0])
-		self.lbl = Label(frame, text=text)
-		self.opt = OptionMenu(frame, self.var, *options)
+		def get_value(self):
+			return self.var.get()
 
 
-	def get_value(self):
-		return self.var.get()
-
-
-	def grid(self, row, column):
-		self.lbl.grid(row=row, column=column  , sticky='w')
-		self.opt.grid(row=row, column=column+1, sticky='nesw')
-
-
+		def grid(self, row, column):
+			self.lbl.grid(row=row, column=column  , sticky='w')
+			self.opt.grid(row=row, column=column+1, sticky='nesw')
 
 
 
 
-
+###########################
+### Main
+###########################
 def main():
+	setup().mainloop()
+
+	assert RUNNING, "did not complete setup"
+
 	print(IP, 'starting.')
 	while RUNNING:
 		sleep(1)
@@ -553,11 +647,14 @@ def main():
 		try:
 			main = Main(s)
 			main.mainloop()
-			s.close()#close socket
 		except Exception as err:
 			printm(err)
 
+		#failsafe
+		try:    s.close()#close socket
+		except: pass
+
+
 
 if __name__ == '__main__':
-	setup().mainloop()
 	main()

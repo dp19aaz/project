@@ -268,7 +268,6 @@ class Main(Tk):
 		#Update displayed image
 		self.update_image(latest_filename, mse)
 
-
 		self.prev_filename_capture = latest_filename
 
 
@@ -307,9 +306,11 @@ class Main(Tk):
 
 
 
+
 	### Update image and related labels
 	def update_image(self, capturedate, mse):
 		latest = open_latest()
+		print('updating images', latest)
 		self.tkimagelatest = ImageTk.PhotoImage(master=self.image_canvas, image=latest)
 		self.latestlabel.config(image=self.tkimagelatest) 
 
@@ -323,7 +324,6 @@ class Main(Tk):
 
 	### Send data via self.socket
 	def socket_send(self, data, encode=True, encrypt=True):
-
 		if encode:  data = data.encode()
 		if encrypt: data = CIPHER.encrypt(data)
 
@@ -387,8 +387,6 @@ class Main(Tk):
 
 		#Write file
 		write_file('latest.jpg', file)
-
-		self.prev_filename_capture = filename
 
 
 		return filename, file
@@ -559,6 +557,7 @@ class setup(Tk):
 
 		ip_lbl = Label(input_frame, text='IP')
 		self.ip_ent = Entry(input_frame, validate='key', vcmd=reg_ip_vcmd)
+		self.ip_ent.bind('<Return>', self.confirm)
 		
 		ip_lbl.     grid(row=index+1, column=0, sticky='w')
 		self.ip_ent.grid(row=index+1, column=1, sticky='nesw')
@@ -578,12 +577,11 @@ class setup(Tk):
 		main_frame. grid(row=2, column=0)
 
 
-	def confirm(self):
+	def confirm(self, event=None):
 
 		#mse_limit, mc_limit, delay, timeout, ip
 		values = [var.get_value() for var in self.vars]
 		values.append(self.ip_ent.get())
-		print(values)
 
 		global MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP, RUNNING, PORT
 		MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP = values

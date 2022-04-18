@@ -10,7 +10,9 @@ import socket
 
 
 
-#Global variables
+###########################
+### Global variables
+###########################
 global latest_image_unix, s
 
 with open('cipherkey.txt', 'r') as f:key = f.read()
@@ -20,10 +22,13 @@ CIPHER = AESCipher(key)
 TIMEOUT = 2
 MAX_LENGTH = 200
 
+DEFAULT_SETTINGS = "0,50,0,auto,0,off,centre,1.0"
 
 
+
+###########################
 ### Main program
-
+###########################
 
 ### Convert unix timestamp to string date
 def unix_to_date(unix):
@@ -38,7 +43,7 @@ def date_to_unix(date):
 
 
 ### Send data
-def socket_send(data, encode=True, encrypt=True):
+def socket_send(s, data, encode=True, encrypt=True):
 	if encode :data = data.encode()
 	if encrypt:data = CIPHER.encrypt(data)
 	s.sendall(data)
@@ -49,12 +54,6 @@ def send_latest(conn, append_jpg=True):
 	global latest_image_unix
 
 	latest_image_unix, filename = take_pic()
-	# filename = unix_to_date(latest_image_unix)
-
-	# if filename == None:print('Could to find latest image');return -1
-	# if append_jpg: filename += '.jpg'
-
-	# filename = 'pics/'+filename
 
 	#read file
 	with open(filename, 'rb') as f:
@@ -92,10 +91,10 @@ def take_pic(store_pic=True):
 	unix = time()
 	date = unix_to_date(unix)
 
-	filename = 'pics/'+date+'.jpg' if store_pic else 'latest.jpg'
+	# filename = 'pics/'+date+'.jpg' if store_pic else 'latest.jpg'
+	filename = 'latest.jpg'
 
 	camera.capture(filename) #take pic and store to filename
-	# print(time(), filename, 'captured.')
 	return unix, filename
 
 
@@ -112,20 +111,21 @@ def set_settings(file):
 def update_settings():
 	global camera
 
-	data = self.get_cam_settings()
+	data = get_cam_settings()
 
 	if data.endswith('\n'):data=data[:-1]
 	
 
-	#c  = contrast,       b = brightness,   s = saturation,
-	#e  = exposure mode,  r = rotation,     d = drc strength
-	#zp = zoom position, za = zoom amount
+	#c  = contrast,        b = brightness,   s = saturation,
+	#e  = exposure mode,   r = rotation,     d = drc strength
+	#zp = zoom position,  za = zoom amount
 	c,b,s,e,r,d,zp,za = data.split(',')	
+	c,b,s,r = map(int, (c,b,s,r))
 
 	za = float(za) #zoom amount
 	zxy = 1 - za   #zoom position
 
-	#                              (x    , y    , w    , h )
+	#                              (x    , y    , width, height)
 	if   zp == 'top left':     z = (0    , 0    , za   , za)
 	elif zp == 'top right':    z = (zxy  , 0    , za   , za)
 	elif zp == 'bottom left':  z = (0    , zxy  , za   , za)
@@ -133,7 +133,6 @@ def update_settings():
 	elif zp == 'centre':       z = (zxy/2, zxy/2, za   , za)	
 	else:                      z = (0    , 0    , 1    , 1 )
 
-	c, b, s, r = map(int, (c, b, s, r))
 
 	camera._set_contrast      (c)
 	camera._set_brightness    (b)
@@ -158,6 +157,11 @@ def get_cam_settings():
 		data = f.read()	
 	return data
 
+
+### Reset cam settings file to defaults
+def reset_cam_settings_file():
+	with open('cam_settings.txt', 'w') as f:
+		f.write(DEFAULT_SETTINGS)
 
 
 
@@ -232,10 +236,17 @@ def signal_factory(signal, conn, value):
 
 
 
-###############
-
+###########################
+### Main
+###########################
 PORT = 9090
-IP = '192.168.0.17'
+IP = '192.168.0.22'
+
+
+try:
+	get_cam_settings()
+except Exception as err:
+	reset_cam_settings_file()
 
 
 
@@ -245,7 +256,6 @@ while 1:
 	#setup camera
 	camera = picamera.PiCamera()
 	camera._set_resolution( (960,540) )
-	# update_settings()
 
 	try:
 		ct = threading.Thread(target=handle)

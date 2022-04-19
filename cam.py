@@ -87,12 +87,11 @@ def ping(conn):
 
 
 ### Take picture
-def take_pic(store_pic=True):
+def take_pic():
 	unix = time()
 	date = unix_to_date(unix)
 
-	# filename = 'pics/'+date+'.jpg' if store_pic else 'latest.jpg'
-	filename = 'latest.jpg'
+	filename = 'pics/'+date+'.jpg'
 
 	camera.capture(filename) #take pic and store to filename
 	return unix, filename
@@ -256,6 +255,9 @@ while 1:
 	#setup camera
 	camera = picamera.PiCamera()
 	camera._set_resolution( (960,540) )
+
+	try:    update_settings()	
+	except: pass
 
 	try:
 		ct = threading.Thread(target=handle)

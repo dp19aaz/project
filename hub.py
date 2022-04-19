@@ -148,6 +148,10 @@ class Main(Tk):
 		self.latestlabel.grid(row=0, column=0, columnspan=1, sticky='nesw')
 
 
+		#misc
+		self.toggle_autoupdate()
+
+
 
 	### Toggle motion detection
 	def toggle_motion_detection(self, set_to=None):
@@ -310,7 +314,7 @@ class Main(Tk):
 	### Update image and related labels
 	def update_image(self, capturedate, mse):
 		latest = open_latest()
-		print('updating images', latest)
+		
 		self.tkimagelatest = ImageTk.PhotoImage(master=self.image_canvas, image=latest)
 		self.latestlabel.config(image=self.tkimagelatest) 
 
@@ -327,7 +331,12 @@ class Main(Tk):
 		if encode:  data = data.encode()
 		if encrypt: data = CIPHER.encrypt(data)
 
-		self.socket.sendall(data)
+		try:
+			self.socket.sendall(data)
+		except Exception as err:
+			print('socket_send error', err)
+			self.destroy()
+
 
 
 
@@ -345,7 +354,7 @@ class Main(Tk):
 
 		except socket.timeout:
 			printm('sockettimeout')
-			return b''
+			self.destroy()
 
 		return buf
 
@@ -651,6 +660,8 @@ def main():
 		#failsafe
 		try:    s.close()#close socket
 		except: pass
+
+		sleep(3)
 
 
 

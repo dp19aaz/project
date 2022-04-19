@@ -48,7 +48,7 @@ class Main(Tk):
 	def __init__(self, filenames):
 		super().__init__()
 
-		self.bind('<Escape>', self.destroy)
+		self.bind('<Escape>', self.close)
 		self.bind('<Left>', self.prev)
 		self.bind('<Right>', self.next)
 		self.bind("<MouseWheel>", self.mouse_wheel)
@@ -63,6 +63,7 @@ class Main(Tk):
 
 		self.image_canvas = Canvas(self)
 
+
 		prev, ltst = self.open_images(self.i) # previous, latest
 
 		self.prev_pic = pic(self.image_canvas, prev)
@@ -72,6 +73,9 @@ class Main(Tk):
 
 		self.prevbtn = Button(self, text='prev', command=self.prev, state='disabled')
 		self.nextbtn = Button(self, text='next', command=self.next)
+
+		if len(self.filenames) <= 2:
+			self.nextbtn.config(state='disabled')
 
 		self.deletebtn = Button(self, text='delete pics', command=self.delete_pics)
 		self.mse_chkbtn = Checkbutton(self, text='Show MSE', variable=self.show_mse)
@@ -96,8 +100,11 @@ class Main(Tk):
 
 	### Return filenames in form "pics/%s.jpg"%s
 	def get_filenames(self, i):
-		now, nxt = self.filenames[i], self.filenames[i+1]
-		return 'pics/%s.jpg'%now, 'pics/%s.jpg'%nxt
+		if len(self.filenames) == 1:
+			return 'pics/%s.jpg'%self.filenames[0], 'pics/%s.jpg'%self.filenames[0]
+		else:
+			now, nxt = self.filenames[i], self.filenames[i+1]
+			return 'pics/%s.jpg'%now, 'pics/%s.jpg'%nxt
 
 
 
@@ -212,6 +219,12 @@ class Main(Tk):
 
 
 
+	### Destroy window. For binds
+	def close(self, event=None):
+		self.destroy()
+
+
+
 ###########################
 ### Setup window
 ###########################
@@ -219,9 +232,17 @@ class setup(Tk):
 	def __init__(self, options):
 		super().__init__()
 
-		for option in options:
-			btn = Button(self, text=option, command=partial(self.choose, option))
-			btn.grid()
+		self.title('Choose set')
+		self.choice = None
+
+		for index, option in enumerate(options):
+			start_time, count = option
+
+			lbl = Label(self, text='%s\n%s frames'%(start_time, count))
+			btn = Button(self, text='Select option %s'%index, command=partial(self.choose, index))
+
+			lbl.grid(row=index, column=0)
+			btn.grid(row=index, column=1, sticky='nesw', padx=4, pady=4)
 
 
 	def choose(self, option):
@@ -239,21 +260,14 @@ def main():
 
 	motions = motions.split('\n')
 	if '' in motions: motions.remove('')
+
 	start_times = [i.split(',')[0] for i in motions]
+	counts = [motions[index].count(',')+1 for index, motion in enumerate(start_times)]
 
-	print('\n'.join(['%s\t%s, %s'%(index, time, motions[index].count(',')+1) for index, time in enumerate(start_times)]))
-
-
-	#not working
-	# setup_win = setup(start_times)
-	# setup_win.mainloop()
-	# Main(motions[setup_win.choice].split(','))
-
-
-
-	# choice = int(input('Select a collection of frames to view.'))
-	choice = 1
-	Main(motions[choice].split(',')).mainloop()
+	setup_win = setup(list(zip(start_times, counts)))
+	setup_win.mainloop()
+	assert setup_win.choice, "did not select a set"
+	Main(motions[setup_win.choice].split(',')).mainloop()
 
 
 

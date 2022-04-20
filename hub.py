@@ -1,5 +1,6 @@
 from calculations import *
 from tkinter import *
+from custom_tk import *
 from aescipher import AESCipher
 from datetime import datetime
 from time import sleep, time
@@ -95,6 +96,8 @@ class Main(Tk):
 
 		self.prev_filename_capture = None
 
+		self.config(bg=BG)
+
 
 		#threads
 		self.autoupdate_thread = None
@@ -112,22 +115,27 @@ class Main(Tk):
 		#image details
 		self.capturedate_label = Label(self, text='Image captured: n/a')
 		self.mse_label = Label(self, text='MSE: n/a')
+		mse_label_ttp = CreateToolTip(self.mse_label, 'Mean Squared Error of latest two frames.')
 
 
 		#buttons
 		self.update_btn = Button(self, text='Update once', command=self.update)
 		self.config_btn = Button(self, text='Config', command=self.open_config)
 
-		self.autoupdate_btn = Button(self, text='Enable autoupdate',
+		self.autoupdate_btn = Button(self, text='Autoupdate: OFF.', bg=OFF_BG,
 			command=self.toggle_autoupdate)
+		self.autoupdate_btn.hover = False
 		
-		self.mot_det_btn = Button(self, text='Disable motion detection',
+		self.mot_det_btn = Button(self, text='Motion detection: ON.', bg=ON_BG,
 			command=self.toggle_motion_detection)
+		self.mot_det_btn.hover = False
 		
-		self.save_all_btn = Button(self, text='Save all images',
+		self.save_all_btn = Button(self, text='Saving every frame: OFF.', bg=OFF_BG,
 			command=self.toggle_save_all)
+		self.save_all_btn.hover = False
 
 		completely_quit_btn = Button(self, text='Completely quit', command=self.completely_quit)
+		completely_quit_btn.config_hover('firebrick4', 'white')
 
 
 		#geometry management
@@ -135,7 +143,7 @@ class Main(Tk):
 		self.image_canvas.     grid(row=0, column=0, columnspan=2, sticky='nesw')
 
 		self.capturedate_label.grid(row=1, column=0, columnspan=2, sticky='nesw')
-		self.mse_label.        grid(row=2, column=0, columnspan=1, sticky='nesw')
+		self.mse_label.        grid(row=2, column=0, columnspan=2, sticky='nesw')
 
 		self.update_btn.       grid(row=3, column=0, columnspan=1, sticky='nesw')
 		self.config_btn.       grid(row=3, column=1, columnspan=1, sticky='nesw')
@@ -156,15 +164,15 @@ class Main(Tk):
 	### Toggle motion detection
 	def toggle_motion_detection(self, set_to=None):
 		#toggle flag
-		if set_to: self.do_motion_detection = set_to
-		else:      self.do_motion_detection = not self.do_motion_detection
+		if set_to!=None: self.do_motion_detection = set_to
+		else:            self.do_motion_detection = not self.do_motion_detection
 
 		#change button text
 		if self.do_motion_detection: #enable motion detection
-			self.mot_det_btn.config(text='Disable motion detection')
+			self.mot_det_btn.config(text='Motion detection: ON.', bg=ON_BG)
 
 		else: #disable motion detection
-			self.mot_det_btn.config(text='Enable motion detection')
+			self.mot_det_btn.config(text='Motion detection: OFF.', bg=OFF_BG)
 
 
 
@@ -174,14 +182,14 @@ class Main(Tk):
 		self.do_save_all = not self.do_save_all
 
 		if self.do_save_all: #enable saving all images
-			self.save_all_btn.config(text='Disable saving every frame')
+			self.save_all_btn.config(text='Saving every frame: ON.', bg=ON_BG)
 			self.toggle_motion_detection(set_to=False)
-			self.mot_det_btn.config(state='disabled')
+			self.mot_det_btn.disable()
 
 
 		else: #disable saving all images
-			self.save_all_btn.config(text='Enable saving every frame')
-			self.mot_det_btn.config(state='normal')
+			self.save_all_btn.config(text='Saving every frame: OFF.', bg=OFF_BG)
+			self.mot_det_btn.enable()
 
 
 
@@ -192,18 +200,18 @@ class Main(Tk):
 		self.auto_update = not self.auto_update
 
 		if self.auto_update: #enable autoupdate
-			self.autoupdate_btn.config(text='Disable autoupdate')
-			self.update_btn.config(state='disabled')
-			self.config_btn.config(state='disabled')
+			self.autoupdate_btn.config(text='Autoupdate: ON.', bg=ON_BG)
+			self.update_btn.disable()
+			self.config_btn.disable()
 
 			self.autoupdate_thread = threading.Thread(target=self.autoupdate)
 			self.autoupdate_thread.start() #begin autoupdate thread
 
 
 		else: #disable autoupdate
-			self.autoupdate_btn.config(text='Enable autoupdate')	
-			self.update_btn.config(state='normal')
-			self.config_btn.config(state='normal')
+			self.autoupdate_btn.config(text='Autoupdate: OFF.', bg=OFF_BG)	
+			self.update_btn.enable()
+			self.config_btn.enable()
 
 			if self.autoupdate_thread:
 				self.autoupdate_thread.join(1) #wait for thread to end
@@ -253,7 +261,7 @@ class Main(Tk):
 
 
 			if self.motion_detection_count >= MC_LIMIT:
-				print('Motion detected.',self.motion_detection_count)
+				printm('Motion detected.',self.motion_detection_count)
 				append_motion_log(self.motion_start_filename, latest_filename.split('/')[1][:-4])
 
 				do_write = True
@@ -334,8 +342,9 @@ class Main(Tk):
 		try:
 			self.socket.sendall(data)
 		except Exception as err:
-			print('socket_send error', err)
-			self.destroy()
+			printm('socket_send error', err)
+
+			self.close()
 
 
 
@@ -353,8 +362,12 @@ class Main(Tk):
 			if decode:  buf = buf.decode()
 
 		except socket.timeout:
-			printm('sockettimeout')
-			self.destroy()
+			printm('sockettimeout in socket_receive')
+			self.close()
+
+		except Exception as err:
+			printm('socket_receive error', err)
+			self.close()
 
 		return buf
 
@@ -414,6 +427,15 @@ class Main(Tk):
 		self.destroy()
 
 
+	### Close window, but not completely quit program
+	def close(self, event=None):
+		self.auto_update = False
+
+		try:    self.autoupdate_thread.join()
+		except: pass
+
+		self.destroy()
+
 
 
 ###########################
@@ -427,6 +449,7 @@ class config_window(Toplevel):
 
 		self.resizable(width=False, height=False)
 		self.title(title)
+		self.config(bg=BG)
 
 
 		self.current_settings = self.get_cam_settings()
@@ -437,14 +460,15 @@ class config_window(Toplevel):
 
 
 		for index, setting in enumerate(self.settings_values_dictionary.keys()):
-			values, curr_value = self.settings_values_dictionary[setting]
+			values, curr_value, description = self.settings_values_dictionary[setting]
 
-			option_var = self.create_lbl_btn(setting, values, curr_value, index)
+			option_var = self.create_lbl_btn(setting, values, curr_value, description, index)
 			self.entry_variables[setting] = option_var
 
 		ttk.Separator(self, orient='horizontal').grid(columnspan=2, sticky='nesw', pady=12)
 
 		update_settings_btn = Button(self, text='Update settings', command=self.update_cam_settings)
+		update_settings_btn.config_hover('darkolivegreen4', 'white')
 		update_settings_btn.grid(columnspan=2, sticky='nesw')
 
 
@@ -471,24 +495,26 @@ class config_window(Toplevel):
 
 		dic = {}
 		for index, line in enumerate(data):
-			setting, values = line.split(':')
+			setting, values, description = line.split(':')
 			values = values.split(',')
 
-			dic[setting] = (values, curr_values[index])
+			dic[setting] = (values, curr_values[index], description)
 
 		return dic
 
 
 
-	def create_lbl_btn(self, setting, values, curr_value, index):
+	def create_lbl_btn(self, setting, values, curr_value, description, index):
 		frame = self
 
 		label = Label(frame, text=setting)
+		label_tooltip = CreateToolTip(label, description)
 
 		option_var = StringVar()
 		option_var.set(curr_value)
 		optionmenu = OptionMenu(frame, option_var, *values)
-
+		optionmenu.config(bg=BG, fg=FG, highlightthickness=0,
+			activebackground=HOVER_BG, activeforeground=HOVER_FG)
 
 
 		label.     grid(row=index, column=0, sticky='nesw')
@@ -512,9 +538,11 @@ class setup(Tk):
 	def __init__(self):
 		super().__init__()
 
-		input_frame = Frame(self)
-		main_frame = Frame(self)
+		self.config(bg=BG)
+		self.title('Setup window')
 
+		input_frame = Frame(self, bg=BG)
+		main_frame = Frame(self, bg=BG)
 
 
 		#optionmenus
@@ -530,10 +558,14 @@ class setup(Tk):
 		self.vars = []
 
 		options = (
-			  ('MSE Limit', IntVar, MSE_LIMIT_VALUES, input_frame)
-			, ('Motion count limit', IntVar, MC_LIMIT_VALES, input_frame)
-			, ('Autoupdate delay', DoubleVar, DELAY_VALUES, input_frame)
-			, ('Socket timeout', IntVar, TIMEOUT_VALUES, input_frame)
+			  ('MSE Limit', IntVar, MSE_LIMIT_VALUES, input_frame,
+			  		'Mean Squared Error limit before motion is considered detected.')
+			, ('Motion count limit', IntVar, MC_LIMIT_VALES, input_frame,
+					'No. consecutive frames containing motion before frames are recorded.')
+			, ('Autoupdate delay', DoubleVar, DELAY_VALUES, input_frame,
+					'Delay between updates when autoupdate is enabled.')
+			, ('Socket timeout', IntVar, TIMEOUT_VALUES, input_frame,
+					'Timeout value of socket connection.')
 			  )
 
 		for index, option in enumerate(options):
@@ -550,22 +582,22 @@ class setup(Tk):
 			#P:value_if_allowed      s:prior_value      S:text inserted
 
 			#example valid ip: 192.168.0.17
-			#all checks must be true or input is invalid
-			checks = (
-				  S.isdigit() or S=='.'
-				, P.count('.') <= 3
-				, len(P) <= 15
-				)
-			
-			for check in checks:
-				if not check: return False
+			if len(P) > 15:return False
+
+			if P.count('.') > 3:return False
+
+			for i in S:
+				if not (i.isdigit() or i=='.'):
+					return False
 
 			return True
 
 		reg_ip_vcmd = (self.register(ip_vcmd), '%P','%s','%S')#register vcmd
 
 		ip_lbl = Label(input_frame, text='IP')
+		ip_lbl_ttp = CreateToolTip(ip_lbl, 'IP of camera to connect to.')
 		self.ip_ent = Entry(input_frame, validate='key', vcmd=reg_ip_vcmd)
+		self.ip_ent.config(bg=BG, fg='white')
 		self.ip_ent.bind('<Return>', self.confirm)
 		
 		ip_lbl.     grid(row=index+1, column=0, sticky='w')
@@ -575,6 +607,7 @@ class setup(Tk):
 		#confirm
 
 		confirm_btn = Button(main_frame, text='Confirm', command=self.confirm)
+		confirm_btn.config_hover('darkolivegreen4', 'white')
 		confirm_btn.grid(row=0, column=0)
 
 
@@ -586,6 +619,11 @@ class setup(Tk):
 		main_frame. grid(row=2, column=0)
 
 
+		self.ip_ent.focus()
+		self.ip_ent.insert(0, '192.168.0.22')
+
+
+	### confirm choices and continue
 	def confirm(self, event=None):
 
 		#mse_limit, mc_limit, delay, timeout, ip
@@ -603,11 +641,14 @@ class setup(Tk):
 
 	#label & optionmenu item for setup window
 	class inputdata:
-		def __init__(self, text, var_type, options, frame):
+		def __init__(self, text, var_type, options, frame, description):
 			self.var = var_type()
 			self.var.set(options[0])
 			self.lbl = Label(frame, text=text)
+			lbl_ttp = CreateToolTip(self.lbl, description)
 			self.opt = OptionMenu(frame, self.var, *options)
+			self.opt.config(bg=BG, fg=FG, highlightthickness=0,
+				activebackground=HOVER_BG, activeforeground=HOVER_FG)
 
 
 		def get_value(self):
@@ -616,7 +657,7 @@ class setup(Tk):
 
 		def grid(self, row, column):
 			self.lbl.grid(row=row, column=column  , sticky='w')
-			self.opt.grid(row=row, column=column+1, sticky='nesw')
+			self.opt.grid(row=row, column=column+1, sticky='nesw', padx=2, pady=2)
 
 
 
@@ -625,17 +666,18 @@ class setup(Tk):
 ### Main
 ###########################
 def main():
+	global RUNNING
 	setup().mainloop()
 
 	assert RUNNING, "did not complete setup"
 
-	print(IP, 'starting.')
+	print('Starting. IP:', IP)
 	while RUNNING:
 		sleep(1)
 
 
 		#create socket
-		printm('Connecting...', end='')
+		printm('Connecting... ', end='')
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		s.settimeout(TIMEOUT)
 
@@ -644,10 +686,17 @@ def main():
 		try:
 			s.connect( (IP, PORT) )
 			printm('Connected.', print_time=False)
+
 		except socket.timeout:
 			printm('Timed out.', print_time=False)
 			sleep(1)
 			continue
+
+		except Exception as err:
+			printm('Connection failed.', print_time=False)
+			printm('err: %s'%err)
+			RUNNING = False
+			break
 
 
 		#open tk window to run main program
@@ -661,8 +710,12 @@ def main():
 		try:    s.close()#close socket
 		except: pass
 
-		sleep(3)
-
+		#delay
+		if RUNNING:
+			for _ in range(3):
+				print('.', end='')
+				sleep(1)
+			print()
 
 
 if __name__ == '__main__':

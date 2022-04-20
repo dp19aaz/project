@@ -1,8 +1,8 @@
-contrast:-50,0,50,100
-brightness:25,50,75
-saturation:-100,-50,0,50,100
-exposure:auto,night
-rotation:0,90,180,270
-dynamic range compression:off,low,medium,high
-zoom position:top left,top right,bottom left,bottom right,centre
-zoom amount:0.1,0.2,0.4,0.6,0.8,0.9,1.0
+contrast:-50,0,50,100:Image contrast.
+brightness:25,50,75:Image brightness.
+saturation:-100,-50,0,50,100:Image saturation.
+exposure:auto,night:Camera exposure mode.
+rotation:0,90,180,270:Image rotation.
+dynamic range compression:off,low,medium,high:Dynamic Range Compression (DRC).
+zoom position:top left,top right,bottom left,bottom right,centre:Where to zoom.
+zoom amount:0.1,0.2,0.4,0.6,0.8,0.9,1.0:Amount to zoom. 1.0 = no zoom. 0.1 = Maximum zoom.

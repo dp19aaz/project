@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter.ttk import Separator
+from custom_tk import *
 from calculations import *
 from PIL import ImageTk,Image
 from os import remove as osremove
@@ -48,6 +49,10 @@ class Main(Tk):
 	def __init__(self, filenames):
 		super().__init__()
 
+		self.deleted_pics = False
+
+		self.config(bg=BG)
+
 		self.bind('<Escape>', self.close)
 		self.bind('<Left>', self.prev)
 		self.bind('<Right>', self.next)
@@ -71,17 +76,25 @@ class Main(Tk):
 
 
 
-		self.prevbtn = Button(self, text='prev', command=self.prev, state='disabled')
-		self.nextbtn = Button(self, text='next', command=self.next)
+		self.prevbtn = Button(self, text='Previous', command=self.prev)
+		self.nextbtn = Button(self, text='Next', command=self.next)
+		self.prevbtn.disable()
+
 
 		if len(self.filenames) <= 2:
-			self.nextbtn.config(state='disabled')
+			self.nextbtn.disable()
 
-		self.deletebtn = Button(self, text='delete pics', command=self.delete_pics)
+		self.deletebtn = Button(self, text='Delete Frames', command=self.delete_pics)
+		self.deletebtn.config_hover('firebrick4', 'white')
+
 		self.mse_chkbtn = Checkbutton(self, text='Show MSE', variable=self.show_mse)
+		self.mse_chkbtn.config(bg=BG, fg=FG, activebackground=BG, activeforeground=FG, selectcolor=BG)
+
 		self.grid_chkbtn = Checkbutton(self, text='Show grid', variable=self.show_grid)
+		self.grid_chkbtn.config(bg=BG, fg=FG, activebackground=BG, activeforeground=FG, selectcolor=BG)
 
 		self.mse_lbl = Label(self, text='mse')
+		mse_lbl_ttp = CreateToolTip(self.mse_lbl, 'Mean Squared Error value of displayed frames.')
 
 
 		#geometry management
@@ -148,9 +161,9 @@ class Main(Tk):
 		self.i -= 1
 		i = self.i
 
-		self.nextbtn.config(state='normal')#enable next button
+		self.nextbtn.enable()
 		if i == 0:
-			self.prevbtn.config(state='disabled')#disable prev button
+			self.prevbtn.disable()
 
 		#go to prev frame
 		prev, latest = self.get_filenames(i)
@@ -165,9 +178,9 @@ class Main(Tk):
 		self.i += 1
 		i = self.i
 
-		self.prevbtn.config(state='normal')#enable prev button
+		self.prevbtn.enable()
 		if i == len(self.filenames)-2:
-			self.nextbtn.config(state='disabled')#disable next button
+			self.nextbtn.disable()
 
 		#go to next frame
 		prev, latest = self.get_filenames(i)
@@ -188,6 +201,7 @@ class Main(Tk):
 		self.delete_images()
 		self.delete_from_motionlog()
 		self.destroy()
+		self.deleted_pics = True
 
 
 	### Delete image files
@@ -232,17 +246,17 @@ class setup(Tk):
 	def __init__(self, options):
 		super().__init__()
 
+		self.config(bg=BG)
+
 		self.title('Choose set')
 		self.choice = None
 
 		for index, option in enumerate(options):
 			start_time, count = option
 
-			lbl = Label(self, text='%s\n%s frames'%(start_time, count))
-			btn = Button(self, text='Select option %s'%index, command=partial(self.choose, index))
-
-			lbl.grid(row=index, column=0)
-			btn.grid(row=index, column=1, sticky='nesw', padx=4, pady=4)
+			text='%s\n%s frames'%(start_time, count)
+			btn = Button(self, text=text, command=partial(self.choose, index))
+			btn.grid(row=index, column=0, sticky='nesw', padx=4, pady=4)
 
 
 	def choose(self, option):
@@ -255,19 +269,30 @@ class setup(Tk):
 ### Main
 ###########################
 def main():
-	with open('motionlog.txt', 'r') as f:
-		motions = f.read()
 
-	motions = motions.split('\n')
-	if '' in motions: motions.remove('')
+	do_loop = True
 
-	start_times = [i.split(',')[0] for i in motions]
-	counts = [motions[index].count(',')+1 for index, motion in enumerate(start_times)]
+	while do_loop:
 
-	setup_win = setup(list(zip(start_times, counts)))
-	setup_win.mainloop()
-	assert setup_win.choice, "did not select a set"
-	Main(motions[setup_win.choice].split(',')).mainloop()
+		with open('motionlog.txt', 'r') as f:
+			motions = f.read()
+
+		motions = motions.split('\n')
+		if '' in motions: motions.remove('')
+
+		start_times = [i.split(',')[0] for i in motions]
+		counts = [motions[index].count(',')+1 for index, motion in enumerate(start_times)]
+
+		options = list(zip(start_times, counts))[:15]
+		print(len(options))
+
+		setup_win = setup(options)
+		setup_win.mainloop()
+		assert setup_win.choice!=None, "did not select a set"
+		main_win = Main(motions[setup_win.choice].split(','))
+		main_win.mainloop()
+
+		do_loop = main_win.deleted_pics
 
 
 

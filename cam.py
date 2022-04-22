@@ -46,7 +46,7 @@ def date_to_unix(date):
 def socket_send(s, data, encode=True, encrypt=True):
 	if encode :data = data.encode()
 	if encrypt:data = CIPHER.encrypt(data)
-	s.sendall(data)
+	s.sendall(data)	
 
 
 ### Send latest captured image to hub
@@ -64,6 +64,8 @@ def send_latest(conn, append_jpg=True):
 	#send header
 	header = '%s#%s'%(filename, len(encrypted_file))
 	socket_send(conn, header)
+
+	sleep(0.2)
 	
 	#send file
 	socket_send(conn, encrypted_file, encrypt=False, encode=False)
@@ -199,10 +201,11 @@ def handle():
 			break
 
 
-		buf = CIPHER.decrypt(buf)
-		buf = buf.decode('utf-8')
+		if len(buf):
+			buf = CIPHER.decrypt(buf)
+			buf = buf.decode('utf-8')
 
-		if len(buf) == 0:
+		else:
 			print('break')
 			break
 
@@ -239,7 +242,7 @@ def signal_factory(signal, conn, value):
 ### Main
 ###########################
 PORT = 9090
-IP = '192.168.0.22'
+IP = '192.168.0.11'
 
 
 try:

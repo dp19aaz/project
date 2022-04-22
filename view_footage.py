@@ -25,8 +25,8 @@ class pic:
 	### Grid (geometry management)
 	def grid(self, **kwargs):
 		self.image_lbl.grid(**kwargs)
-		self.horiz_sep.grid(**kwargs, sticky='we')
-		self.verti_sep.grid(**kwargs, sticky='ns')
+		self.horiz_sep.grid(**kwargs, sticky='we');self.horiz_sep.grid_remove()
+		self.verti_sep.grid(**kwargs, sticky='ns');self.verti_sep.grid_remove()
 
 
 	### Update image
@@ -49,8 +49,8 @@ class Main(Tk):
 	def __init__(self, filenames):
 		super().__init__()
 
-		self.deleted_pics = False
 
+		#window
 		self.config(bg=BG)
 
 		self.bind('<Escape>', self.close)
@@ -58,23 +58,24 @@ class Main(Tk):
 		self.bind('<Right>', self.next)
 		self.bind("<MouseWheel>", self.mouse_wheel)
 
-		self.filenames = filenames
 
+		#flags
+		self.deleted_pics = False # for use in main method
+
+		self.filenames = filenames
 		self.i = 0
 
-		self.show_mse  = BooleanVar(); self.show_mse .set(True)
-		self.show_grid = BooleanVar(); self.show_grid.set(True)
+		self.show_mse  = BooleanVar(); self.show_mse .set(False)
+		self.show_grid = BooleanVar(); self.show_grid.set(False)
 
 
+		#images
 		self.image_canvas = Canvas(self)
-
 
 		prev, ltst = self.open_images(self.i) # previous, latest
 
 		self.prev_pic = pic(self.image_canvas, prev)
 		self.ltst_pic = pic(self.image_canvas, ltst)
-
-
 
 		self.prevbtn = Button(self, text='Previous', command=self.prev)
 		self.nextbtn = Button(self, text='Next', command=self.next)
@@ -93,7 +94,7 @@ class Main(Tk):
 		self.grid_chkbtn = Checkbutton(self, text='Show grid', variable=self.show_grid)
 		self.grid_chkbtn.config(bg=BG, fg=FG, activebackground=BG, activeforeground=FG, selectcolor=BG)
 
-		self.mse_lbl = Label(self, text='mse')
+		self.mse_lbl = Label(self, text='MSE disabled')
 		mse_lbl_ttp = CreateToolTip(self.mse_lbl, 'Mean Squared Error value of displayed frames.')
 
 
@@ -109,6 +110,7 @@ class Main(Tk):
 		self.deletebtn.     grid(row=3, column=0, sticky='nesw', rowspan=2)
 		self.mse_chkbtn.    grid(row=3, column=1, sticky='nesw')
 		self.grid_chkbtn.   grid(row=4, column=1, sticky='nesw')
+
 
 
 	### Return filenames in form "pics/%s.jpg"%s
@@ -154,6 +156,7 @@ class Main(Tk):
 		self.title('%s, %s. (%s/%s)'%(prev, latest, i+1, len(self.filenames)-1))
 
 
+
 	### Go to previous frame
 	def prev(self, event=None):
 		if self.i < 1:return
@@ -169,6 +172,7 @@ class Main(Tk):
 		prev, latest = self.get_filenames(i)
 		self.update_lbls(prev, latest, i)
 		self.update_title(prev, latest, i)
+
 
 
 	### Go to next frame
@@ -188,12 +192,14 @@ class Main(Tk):
 		self.update_title(prev, latest, i)
 
 
+
 	### Facilitate scrolling to move between frames
 	def mouse_wheel(self, event):
 		if event.num == 5 or event.delta == -120:
 			self.prev()
 		if event.num == 4 or event.delta == 120:
 			self.next()
+
 
 
 	### Delete images and references from motionlog and quit
@@ -204,6 +210,7 @@ class Main(Tk):
 		self.deleted_pics = True
 
 
+
 	### Delete image files
 	def delete_images(self):
 		print(self.filenames)
@@ -211,6 +218,7 @@ class Main(Tk):
 			print(filename)
 			filename = 'pics/%s.jpg'%filename
 			osremove(filename)
+
 
 
 	### Delete image references from motionlog
@@ -256,9 +264,11 @@ class setup(Tk):
 
 			text='%s\n%s frames'%(start_time, count)
 			btn = Button(self, text=text, command=partial(self.choose, index))
+			btn.config_hover('darkolivegreen4', 'white')
 			btn.grid(row=index, column=0, sticky='nesw', padx=4, pady=4)
 
 
+	### Choose an option and continue
 	def choose(self, option):
 		self.choice = option
 		self.destroy()
@@ -282,13 +292,12 @@ def main():
 
 		start_times = [i.split(',')[0] for i in motions]
 		counts = [motions[index].count(',')+1 for index, motion in enumerate(start_times)]
-
 		options = list(zip(start_times, counts))[:15]
-		print(len(options))
 
 		setup_win = setup(options)
 		setup_win.mainloop()
 		assert setup_win.choice!=None, "did not select a set"
+
 		main_win = Main(motions[setup_win.choice].split(','))
 		main_win.mainloop()
 

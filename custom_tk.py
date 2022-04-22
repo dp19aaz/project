@@ -25,9 +25,6 @@ class Button(tk.Button):
 		self.defaultBackground = self['bg']
 		self.defaultForeground = self['fg']
 
-		self.defaultActiveBackground = self['activebackground']
-		self.defaultActiveForeground = self['activeforeground']
-
 		self.bind('<Enter>', self.on_enter)
 		self.bind('<Leave>', self.on_leave)
 
@@ -35,27 +32,28 @@ class Button(tk.Button):
 	def config_hover(self, activebg, activefg):
 		self['activebackground'] = activebg
 		self['activeforeground'] = activefg
-		self.defaultActiveBackground = self['activebackground']
-		self.defaultActiveForeground = self['activeforeground']
 
-	def on_enter(self, e):
+	def on_enter(self, event=None):
 		if self.hover:
 			self['background'] = self['activebackground']
 			self['foreground'] = self['activeforeground']
 
 
-	def on_leave(self, e):
+	def on_leave(self, event=None):
 		if self.hover:
 			self['background'] = self.defaultBackground
 			self['foreground'] = self.defaultForeground
 
 
 	def disable(self):
-		self.config(state='disabled', activebackground=BG)
+		self.config(state='disabled')
+		self.on_leave()
+		self.hover = False
 		
 
 	def enable(self):
-		self.config(state='normal', activebackground=self.defaultActiveBackground)
+		self.config(state='normal')
+		self.hover = True
 
 
 

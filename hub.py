@@ -13,10 +13,10 @@ import tkinter.ttk as ttk
 
 
 ### Print with time of print. For debugging and testing.
-def printm(out, print_time=True, end='\n'):
+def printm(out, *args, print_time=True, end='\n'):
 	if print_time:
 		print('{:.2f}'.format(time()), end=' | ')
-	print(out, end=end)
+	print(out, *args, end=end)
 
 
 
@@ -39,8 +39,8 @@ def append_motion_log(start, new):
 	#Append new time or create new item
 	if start not in start_times:
 		with open('motionlog.txt', 'a') as f:
-		 	# f.write('\n%s,%s'%(start, new))
-		 	f.write('\n%s'%(start))
+			# f.write('\n%s,%s'%(start, new))
+			f.write('\n%s'%(start))
 
 	else:
 		filenames[start_times.index(start)] += ',%s'%new
@@ -386,6 +386,7 @@ class Main(Tk):
 		filename, filesize = buf.split('#')
 		filesize = int(filesize)	
 
+		sleep(0.1)
 
 		#Receive file data
 		file = b''
@@ -559,9 +560,9 @@ class setup(Tk):
 
 		options = (
 			  ('MSE Limit', IntVar, MSE_LIMIT_VALUES, input_frame,
-			  		'Mean Squared Error limit before motion is considered detected.')
+					'Mean Squared Error limit before motion is considered detected.')
 			, ('Motion count limit', IntVar, MC_LIMIT_VALES, input_frame,
-					'No. consecutive frames containing motion before frames are recorded.')
+					'No. consecutive frames containing motion before frames are recorded. Select 0 to save all frames with motion.')
 			, ('Autoupdate delay', DoubleVar, DELAY_VALUES, input_frame,
 					'Delay between updates when autoupdate is enabled.')
 			, ('Socket timeout', IntVar, TIMEOUT_VALUES, input_frame,
@@ -615,12 +616,12 @@ class setup(Tk):
 
 		input_frame.grid(row=0, column=0)
 		ttk.Separator(self, orient='horizontal').grid(
-			             row=1, column=0, sticky='nesw', pady=12)
+						 row=1, column=0, sticky='nesw', pady=12)
 		main_frame. grid(row=2, column=0)
 
 
 		self.ip_ent.focus()
-		self.ip_ent.insert(0, '192.168.0.22')
+		self.ip_ent.insert(0, '192.168.0.11')
 
 
 	### confirm choices and continue

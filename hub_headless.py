@@ -6,7 +6,6 @@ from datetime import datetime
 from time import sleep, time
 from PIL import ImageTk,Image
 
-import threading
 import socket
 import tkinter.ttk as ttk
 

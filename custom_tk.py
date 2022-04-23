@@ -6,8 +6,7 @@ global BG, FG
 BG, FG = 'gray40', 'white'
 HOVER_BG, HOVER_FG = 'gray20', 'white'
 
-ON_BG, OFF_BG = 'dark slate gray', 'saddle brown'
-
+ON_BG, OFF_BG = 'darkslategray', 'saddlebrown'
 
 
 ### Button
@@ -29,7 +28,7 @@ class Button(tk.Button):
 		self.bind('<Leave>', self.on_leave)
 
 
-	def config_hover(self, activebg, activefg):
+	def config_hover(self, activebg, activefg=FG):
 		self['activebackground'] = activebg
 		self['activeforeground'] = activefg
 
@@ -54,6 +53,11 @@ class Button(tk.Button):
 	def enable(self):
 		self.config(state='normal')
 		self.hover = True
+
+	def set_bg(self, bg):
+		self['bg'] = bg
+		self.defaultBackground = bg
+
 
 
 

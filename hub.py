@@ -6,7 +6,6 @@ from datetime import datetime
 from time import sleep, time
 from PIL import ImageTk,Image
 
-import threading
 import socket
 import tkinter.ttk as ttk
 
@@ -170,9 +169,13 @@ class Main(Tk):
 		#change button text
 		if self.do_motion_detection: #enable motion detection
 			self.mot_det_btn.config(text='Motion detection: ON.', bg=ON_BG)
+			self.mot_det_btn.set_bg(ON_BG)
+
 
 		else: #disable motion detection
 			self.mot_det_btn.config(text='Motion detection: OFF.', bg=OFF_BG)
+			self.mot_det_btn.set_bg(OFF_BG)
+
 
 
 
@@ -182,13 +185,15 @@ class Main(Tk):
 		self.do_save_all = not self.do_save_all
 
 		if self.do_save_all: #enable saving all images
-			self.save_all_btn.config(text='Saving every frame: ON.', bg=ON_BG)
+			self.save_all_btn.config(text='Saving every frame: ON.')
+			self.save_all_btn.set_bg(ON_BG)
 			self.toggle_motion_detection(set_to=False)
 			self.mot_det_btn.disable()
 
 
 		else: #disable saving all images
-			self.save_all_btn.config(text='Saving every frame: OFF.', bg=OFF_BG)
+			self.save_all_btn.config(text='Saving every frame: OFF.')
+			self.save_all_btn.set_bg(OFF_BG)
 			self.mot_det_btn.enable()
 
 
@@ -200,16 +205,17 @@ class Main(Tk):
 		self.auto_update = not self.auto_update
 
 		if self.auto_update: #enable autoupdate
-			self.autoupdate_btn.config(text='Autoupdate: ON.', bg=ON_BG)
+			self.autoupdate_btn.config(text='Autoupdate: ON.')
+			self.autoupdate_btn.set_bg(ON_BG)
 			self.update_btn.disable()
 			self.config_btn.disable()
 
-			self.autoupdate_thread = threading.Thread(target=self.autoupdate)
-			self.autoupdate_thread.start() #begin autoupdate thread
+			self.after(int(DELAY*1000), self.autoupdate)
 
 
 		else: #disable autoupdate
-			self.autoupdate_btn.config(text='Autoupdate: OFF.', bg=OFF_BG)	
+			self.autoupdate_btn.config(text='Autoupdate: OFF.')
+			self.autoupdate_btn.set_bg(OFF_BG)
 			self.update_btn.enable()
 			self.config_btn.enable()
 
@@ -217,17 +223,15 @@ class Main(Tk):
 				self.autoupdate_thread.join(1) #wait for thread to end
 
 
-
 	### Thread to call self.update() repeatedly
 	def autoupdate(self):
 		global RUNNING
 
-		while self.auto_update and RUNNING:
-			self.update()
-			sleep(DELAY)
+		if not RUNNING or not self.auto_update:
+			return
 
-		# if self.auto_update: self.toggle_autoupdate()
-		if self.auto_update: self.auto_update = False
+		self.update()
+		self.after(int(DELAY*1000), self.autoupdate)
 
 
 
@@ -281,6 +285,8 @@ class Main(Tk):
 		self.update_image(latest_filename, mse)
 
 		self.prev_filename_capture = latest_filename
+
+		return latest_filename, mse
 
 
 
@@ -550,7 +556,7 @@ class setup(Tk):
 
 		#OptionMenu values. index0 is default
 		MSE_LIMIT_VALUES = (100, 25, 50, 75, 150, 200, 350, 500)
-		MC_LIMIT_VALES   = (2, 3, 4, 5, 6, 1, 0)
+		MC_LIMIT_VALES   = (1, 2, 3, 4, 5, 6, 0)
 		DELAY_VALUES     = (0.1, 0.3, 0.5, 0.7, 1, 2, 0)
 		TIMEOUT_VALUES   = (2, 1, 3, 5, 10)
 

@@ -1,0 +1,95 @@
+[33mcommit 8116a16db32e7ccef94b26b1942d2aa622e4f219[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Sat Apr 23 10:25:31 2022 +0100
+
+    replaced threading with tk.after().
+
+[33mcommit eea127b80e48c9f934910cf09a55a3cfb9feb254[m[33m ([m[1;31morigin/main[m[33m)[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Fri Apr 22 21:48:34 2022 +0100
+
+    minor changes
+
+[33mcommit ec97ed63203e7b0dfe47151b58aab507a1051399[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Fri Apr 22 10:14:52 2022 +0100
+
+    created hub_headless.
+
+[33mcommit ae979ac335f2cce1b07dbfa4f96d1f973eb6bc2d[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Wed Apr 20 21:15:05 2022 +0100
+
+    added custom_tk. added colours to everything. added descriptions for hovering over labels.
+
+[33mcommit 38f546dbdb6803d81d79046886c6133ec9540888[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Tue Apr 19 19:49:59 2022 +0100
+
+    added setup window for view_footage. small updates to hub and cam
+
+[33mcommit 03575fdcbc7a8d098b08148d4b5991dd46e0db84[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Mon Apr 18 08:58:38 2022 +0100
+
+    cleaning up
+
+[33mcommit fed81d9b084e64e691a8cd67f11470391c7e4418[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Sat Apr 16 09:03:31 2022 +0100
+
+    refactoring view_footage. moved config_window into hub
+
+[33mcommit 774e2ae23d234091228ad3170cbefeb77c0a3bcf[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Wed Apr 13 11:49:42 2022 +0100
+
+    replaced hubd with hub, which now has a setup tk window
+
+[33mcommit a0c069f4abc0a71c10ecaf6b8087d7b52dd9df8b[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Mon Apr 11 11:14:37 2022 +0100
+
+    improved view_footage. started deleting photos after capture on cam.
+
+[33mcommit 8ac09648b332042d23dc7c8157b17004b2251a90[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Thu Mar 17 21:42:00 2022 +0000
+
+    Begun refactoring.
+
+[33mcommit c4cccc7fc42ccc09a37340464e95e27e60c418ce[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Wed Mar 16 12:31:10 2022 +0000
+
+    Added view footage feature. Removed SSIM.
+
+[33mcommit 9a1f3c2d4bc34059f1b59ae02763cc641dbb4211[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Sat Mar 12 16:48:19 2022 +0000
+
+    Moving test folder elsewhere.
+
+[33mcommit a05c0a1b99afd4535991e45618e79da78983e15b[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Sat Mar 12 16:47:06 2022 +0000
+
+    Cam config largely working.
+
+[33mcommit 6f922c510789a661a9289234c2f24ff6d508529f[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Fri Mar 11 09:24:42 2022 +0000
+
+    Added ssim. Testing mse and ssim. Started work on camera settings configuration.
+
+[33mcommit 0e618fbd8a9c0595dda169040ee402ce61431ed2[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Tue Mar 8 14:10:46 2022 +0000
+
+    Working.
+
+[33mcommit 37d34fe99f77698e389cce018d9ce4ff10d936ee[m
+Author: dp19aaz <dp19aaz@herts.ac.uk>
+Date:   Sat Mar 5 10:16:06 2022 +0000
+
+    First commit

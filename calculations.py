@@ -12,11 +12,11 @@ def calc_mse(filenameA, filenameB):
 	# Availability : https://ieeexplore.ieee.org/document/7877503
 	#
 	##############################################################
-	imageA, imageB = imread(filenameA), imread(filenameB)
-
 	try:
+		imageA, imageB = imread(filenameA), imread(filenameB)
 		mse = npsum((imageA.astype("float") - imageB.astype("float")) ** 2)
 		mse /= float(imageA.shape[0] * imageA.shape[1])
 		return mse
+
 	except:
 		return -1

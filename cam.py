@@ -201,6 +201,7 @@ def handle():
 			break
 
 
+
 		if len(buf):
 			buf = CIPHER.decrypt(buf)
 			buf = buf.decode('utf-8')

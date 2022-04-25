@@ -99,9 +99,6 @@ class Main(Tk):
 		self.config(bg=BG)
 
 
-		#threads
-		self.autoupdate_thread = None
-
 
 		#image
 		self.image_canvas = Canvas(self)
@@ -220,9 +217,6 @@ class Main(Tk):
 			self.update_btn.enable()
 			self.config_btn.enable()
 
-			if self.autoupdate_thread:
-				self.autoupdate_thread.join(1) #wait for thread to end
-
 
 	### Thread to call self.update() repeatedly
 	def autoupdate(self):
@@ -232,7 +226,6 @@ class Main(Tk):
 			return
 
 		self.update()
-		print(int(DELAY*1000))
 		self.after(int(DELAY*1000), self.autoupdate)
 
 
@@ -427,22 +420,14 @@ class Main(Tk):
 	### Quit program, not just close window
 	def completely_quit(self, event=None):
 		global RUNNING
-		
 		RUNNING = False
-
-		if self.autoupdate_thread:
-			self.autoupdate_thread.join(1)
-
+		self.auto_update = False
 		self.destroy()
 
 
 	### Close window, but not completely quit program
 	def close(self, event=None):
 		self.auto_update = False
-
-		try:    self.autoupdate_thread.join()
-		except: pass
-
 		self.destroy()
 
 
@@ -546,10 +531,14 @@ class config_window(Toplevel):
 ### Main
 ###########################
 def main():
-	global RUNNING
-	setup().mainloop()
+	global RUNNING, MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP
+	setup_win = setup()
+	setup_win.mainloop()
 
-	assert RUNNING, "did not complete setup"
+	assert setup_win.complete, "did not complete setup"
+	PORT = setup_win.PORT
+	RUNNING = setup_win.complete
+	MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP = setup_win.values
 
 	print('Starting. IP:', IP)
 	while RUNNING:

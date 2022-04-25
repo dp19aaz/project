@@ -77,20 +77,20 @@ class Main:
 		super().__init__()
 
 		#args
+		global RUNNING, DELAY
 		self.socket = socket
 
 
 		#flags
-		self.auto_update = False
 		self.motion_detection_count = 0 #no. consecutive frames where motion is detected
 		self.motion_start_filename = None
 
 		self.prev_filename_capture = None
 
 
-		global RUNNING
 		while RUNNING:
 			self.update()
+			sleep(DELAY)
 
 
 
@@ -153,8 +153,8 @@ class Main:
 		try:
 			self.socket.sendall(data)
 		except Exception as err:
-			printm('socket_send error', err)
-
+			# printm('socket_send error', err)
+			# print(5)
 			self.close()
 
 
@@ -226,15 +226,25 @@ class Main:
 
 
 
+	### Close window, but not completely quit program
+	def close(self, event=None):
+		global RUNNING
+		RUNNING = False
+
+
 
 ###########################
 ### Main
 ###########################
 def main():
-	global RUNNING
-	setup().mainloop()
+	global RUNNING, MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP
+	setup_win = setup()
+	setup_win.mainloop()
 
-	assert RUNNING, "did not complete setup"
+	assert setup_win.complete, "did not complete setup"
+	PORT = setup_win.PORT
+	RUNNING = setup_win.complete
+	MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP = setup_win.values
 
 	print('Starting. IP:', IP)
 	while RUNNING:

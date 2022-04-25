@@ -11,6 +11,9 @@ class setup(Tk):
 	def __init__(self):
 		super().__init__()
 
+		self.complete = False
+		self.IP = None
+
 		self.config(bg=BG)
 		self.title('Setup window')
 
@@ -21,7 +24,7 @@ class setup(Tk):
 		#optionmenus
 
 		#OptionMenu values. index0 is default
-		MSE_LIMIT_VALUES = (100, 25, 50, 75, 150, 200, 350, 500)
+		MSE_LIMIT_VALUES = (100, 20, 25, 50, 75, 150, 200, 350, 500)
 		MC_LIMIT_VALES   = (1, 2, 3, 4, 5, 6, 0)
 		DELAY_VALUES     = (0.1, 0.3, 0.5, 0.7, 1, 2, 0)
 		TIMEOUT_VALUES   = (2, 1, 3, 5, 10)
@@ -103,10 +106,9 @@ class setup(Tk):
 		values = [var.get_value() for var in self.vars]
 		values.append(self.ip_ent.get())
 
-		global MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP, RUNNING, PORT
-		MSE_LIMIT, MC_LIMIT, DELAY, TIMEOUT, IP = values
-		RUNNING = True
-		PORT = 9090
+		self.values = values
+		self.PORT = 9090
+		self.complete = True
 
 		self.destroy()
 
@@ -131,3 +133,8 @@ class setup(Tk):
 		def grid(self, row, column):
 			self.lbl.grid(row=row, column=column  , sticky='w')
 			self.opt.grid(row=row, column=column+1, sticky='nesw', padx=2, pady=2)
+
+
+
+if __name__ == '__main__':
+	setup().mainloop()

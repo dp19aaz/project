@@ -99,7 +99,6 @@ class Main(Tk):
 		self.config(bg=BG)
 
 
-
 		#image
 		self.image_canvas = Canvas(self)
 
@@ -120,15 +119,15 @@ class Main(Tk):
 		self.config_btn = Button(self, text='Config', command=self.open_config)
 
 		self.autoupdate_btn = Button(self, text='Autoupdate: OFF.', bg=OFF_BG,
-			command=self.toggle_autoupdate)
+									command=self.toggle_autoupdate)
 		self.autoupdate_btn.hover = False
 		
 		self.mot_det_btn = Button(self, text='Motion detection: ON.', bg=ON_BG,
-			command=self.toggle_motion_detection)
+									command=self.toggle_motion_detection)
 		self.mot_det_btn.hover = False
 		
 		self.save_all_btn = Button(self, text='Saving every frame: OFF.', bg=OFF_BG,
-			command=self.toggle_save_all)
+									command=self.toggle_save_all)
 		self.save_all_btn.hover = False
 
 		completely_quit_btn = Button(self, text='Completely quit', command=self.completely_quit)
@@ -196,7 +195,6 @@ class Main(Tk):
 
 
 
-
 	### Toggle auto_update
 	def toggle_autoupdate(self):
 		#toggle flag
@@ -218,7 +216,8 @@ class Main(Tk):
 			self.config_btn.enable()
 
 
-	### Thread to call self.update() repeatedly
+
+	### Call self.update() repeatedly
 	def autoupdate(self):
 		global RUNNING
 
@@ -230,7 +229,7 @@ class Main(Tk):
 
 
 
-	### Main thread
+	### Get latest capture and update display thread
 	def update(self, event=None):
 		#Get latest captured image
 			#latest_filename = date and time of image capture
@@ -239,7 +238,7 @@ class Main(Tk):
 		try:    latest_filename, latest_bytes = self.get_latest_capture()
 		except: return
 
-		if latest_filename == self.prev_filename_capture:return
+		if latest_filename == self.prev_filename_capture:return#dont overwrite image
 
 		#Motion detection and image saving
 		do_write = self.do_save_all
@@ -281,7 +280,7 @@ class Main(Tk):
 
 		self.prev_filename_capture = latest_filename
 
-		return latest_filename, mse
+		# return latest_filename, mse
 
 
 
@@ -292,6 +291,7 @@ class Main(Tk):
 
 
 	### Get cam current settings
+	### Returns settings as concatentated string
 	def get_cam_settings(self):
 		self.socket_send('SEND_CAM_SETTINGS#') #request cam settingss
 		sleep(0.01)
@@ -331,7 +331,7 @@ class Main(Tk):
 
 		mse_text = 'MSE: {:,.2f}'.format(mse) if mse != -1 else 'MSE: n/a'
 
-		self.mse_label.config (text=mse_text)
+		self.mse_label.config(text=mse_text)
 
 
 
@@ -375,6 +375,7 @@ class Main(Tk):
 
 
 	### Request and receive latest captured image
+	### Returns filename, file (bytestream)
 	def get_latest_capture(self):
 
 		#Request file
@@ -412,7 +413,6 @@ class Main(Tk):
 		#Write file
 		write_file('latest.jpg', file)
 
-
 		return filename, file
 
 
@@ -440,19 +440,17 @@ class config_window(Toplevel):
 		super().__init__()
 
 		self.controller = controller
-
 		self.resizable(width=False, height=False)
 		self.title(title)
 		self.config(bg=BG)
 
 
 		self.current_settings = self.get_cam_settings()
-
 		self.entry_variables = {}
 		self.settings_values_dictionary = self.get_option_values()
 
 
-
+		#create optionmenu inputs
 		for index, setting in enumerate(self.settings_values_dictionary.keys()):
 			values, curr_value, description = self.settings_values_dictionary[setting]
 
@@ -466,22 +464,25 @@ class config_window(Toplevel):
 		update_settings_btn.grid(columnspan=2, sticky='nesw')
 
 
+	### Set/update camera settings
 	def update_cam_settings(self):
 		settings = [i.get() for i in self.entry_variables.values()]
-		settings = ",".join(settings)
+		settings = ",".join(settings) # concatenate settings to one string
 
 		self.controller.update_cam_settings(settings)
 
 
-
+	### Get current camera settings
 	def get_cam_settings(self):
 		return self.controller.get_cam_settings()
 
 
-
+	### Get config options and their optional values
+	### Returns dictionary of form {setting: (values, current value, description) }
 	def get_option_values(self):
 		curr_values = self.current_settings.split(',')
 
+		# get settings, their possible values, and their description
 		with open('settings_values.txt', 'r') as f:
 			data = f.read()	
 
@@ -497,15 +498,16 @@ class config_window(Toplevel):
 		return dic
 
 
-
+	### Create option menu and accompanying label for config option.
+	### Returns tk.StringVar() object for optionmenu variable
 	def create_lbl_btn(self, setting, values, curr_value, description, index):
 		frame = self
 
 		label = Label(frame, text=setting)
 		label_tooltip = CreateToolTip(label, description)
 
-		option_var = StringVar()
-		option_var.set(curr_value)
+		option_var = StringVar() #variable to store selected value
+		option_var.set(curr_value) #set to current set value
 		optionmenu = OptionMenu(frame, option_var, *values)
 		optionmenu.config(bg=BG, fg=FG, highlightthickness=0,
 			activebackground=HOVER_BG, activeforeground=HOVER_FG)
@@ -518,6 +520,7 @@ class config_window(Toplevel):
 
 
 
+	### Close config window
 	def close(self):
 		self.controller.close_config()
 

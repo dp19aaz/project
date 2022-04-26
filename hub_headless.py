@@ -84,17 +84,17 @@ class Main:
 		#flags
 		self.motion_detection_count = 0 #no. consecutive frames where motion is detected
 		self.motion_start_filename = None
-
 		self.prev_filename_capture = None
 
 
+		#main
 		while RUNNING:
 			self.update()
 			sleep(DELAY)
 
 
 
-	### Main thread
+	### Get latest capture and update display thread
 	def update(self, event=None):
 		#Get latest captured image
 			#latest_filename = date and time of image capture
@@ -184,6 +184,7 @@ class Main:
 
 
 	### Request and receive latest captured image
+	### Returns filename, file (byte stream)
 	def get_latest_capture(self):
 
 		#Request file

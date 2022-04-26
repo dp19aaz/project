@@ -60,7 +60,7 @@ class Main(Tk):
 
 
 		#flags
-		self.deleted_pics = False # for use in main method
+		self.deleted_pics = False # flag to indicated if pics deleted or not.
 
 		self.filenames = filenames
 		self.i = 0
@@ -77,13 +77,14 @@ class Main(Tk):
 		self.prev_pic = pic(self.image_canvas, prev)
 		self.ltst_pic = pic(self.image_canvas, ltst)
 
+		#buttons/labels
 		self.prevbtn = Button(self, text='Previous', command=self.prev)
 		self.nextbtn = Button(self, text='Next', command=self.next)
+
 		self.prevbtn.disable()
-
-
 		if len(self.filenames) <= 2:
 			self.nextbtn.disable()
+
 
 		self.deletebtn = Button(self, text='Delete Frames', command=self.delete_pics)
 		self.deletebtn.config_hover('firebrick4', 'white')

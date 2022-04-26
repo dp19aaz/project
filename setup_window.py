@@ -11,7 +11,7 @@ class setup(Tk):
 	def __init__(self):
 		super().__init__()
 
-		self.complete = False
+		self.complete = False #flag to indicate setup is complete
 		self.IP = None
 
 		self.config(bg=BG)
@@ -26,7 +26,7 @@ class setup(Tk):
 		#OptionMenu values. index0 is default
 		MSE_LIMIT_VALUES = (100, 20, 25, 50, 75, 150, 200, 350, 500)
 		MC_LIMIT_VALES   = (1, 2, 3, 4, 5, 6, 0)
-		DELAY_VALUES     = (0.1, 0.3, 0.5, 0.7, 1, 2, 0)
+		DELAY_VALUES     = (0.1, 0.3, 0.5, 0.7, 1, 2, 0.01)
 		TIMEOUT_VALUES   = (2, 1, 3, 5, 10)
 
 
@@ -117,8 +117,8 @@ class setup(Tk):
 	#label & optionmenu item for setup window
 	class inputdata:
 		def __init__(self, text, var_type, options, frame, description):
-			self.var = var_type()
-			self.var.set(options[0])
+			self.var = var_type() #variable of specified type
+			self.var.set(options[0]) #set to default value
 			self.lbl = Label(frame, text=text)
 			lbl_ttp = CreateToolTip(self.lbl, description)
 			self.opt = OptionMenu(frame, self.var, *options)
@@ -126,10 +126,12 @@ class setup(Tk):
 				activebackground=HOVER_BG, activeforeground=HOVER_FG)
 
 
+		### get current selected value
 		def get_value(self):
 			return self.var.get()
 
 
+		#geometry management for label and option menu
 		def grid(self, row, column):
 			self.lbl.grid(row=row, column=column  , sticky='w')
 			self.opt.grid(row=row, column=column+1, sticky='nesw', padx=2, pady=2)
